@@ -25,6 +25,26 @@ script in `scripts/` — never inside a workflow script directly. Pure computati
 - **Deterministic, no LLM** → `core/` + `scripts/*.mjs` (ingest, gate, persist, render).
 - **Needs judgment** → CC subagents in `agents/` (classify, prioritize, compose, research).
 
+## The desktop GUI (`desktop/`)
+
+An optional Electron control panel. It is **quarantined** — its own `package.json` with
+Electron as a dev dependency, so the core stays zero-dependency and portable. The split
+that makes the core/CC layer work applies here too: Electron's main process **never
+imports the ESM core** (its bundled Node may lack `node:sqlite`); instead it spawns
+`node scripts/control.mjs <cmd>`, the one JSON-in/JSON-out **bridge** that is the entire
+IPC surface. So writes stay single-writer (WAL + `busy_timeout`), and the renderer stays
+sandboxed (contextIsolation + sandbox + `nodeIntegration:false` + strict CSP) seeing only
+`window.guai` from `preload.js`. The GUI **records** action decisions only — sending still
+goes through `/guai-confirm`. Main/preload are CommonJS on purpose (no ESM-in-Electron
+friction); the renderer is vanilla `@ts-check` JS, no framework. Smoke test:
+`GUAI_SMOKE=1 electron .` boots, screenshots, and self-quits.
+
+- New deterministic surface → add a subcommand to `scripts/control.mjs` (reuses `core/`).
+- `config.monitors.{dev,cost,email,calendar}` are the per-domain switches: `core/sweep.js`
+  honors dev/cost; `workflows/sweep.workflow.js` honors email/calendar (read via the bridge).
+- `config.schedule` drives the in-app scheduler (`desktop/main.js`) and the optional
+  durable Windows Task Scheduler task (`Guai-DailyBrief`, created by `control.mjs`).
+
 ## Conventions
 
 - ESM everywhere (`"type": "module"`). Core files are `.js`, entrypoints are `.mjs`.
@@ -45,6 +65,9 @@ npm run sweep             # ingest → gate → persist (deterministic; --dry fo
 npm run brief             # render the morning brief from memory
 npm run dashboard         # render state/dashboard.html (self-contained)
 npm run export            # DB → human-readable JSON snapshot
+npm run control -- status # JSON bridge for the GUI (status|sweep|brief|config-get|…)
+npm run desktop:setup     # one-time: install Electron + generate the tray icon
+npm run desktop           # launch the desktop control panel (lives in the tray)
 ```
 
 ## Where things are

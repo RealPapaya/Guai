@@ -82,8 +82,9 @@ function taskQuery() {
 
 function taskInstall(hour, minute) {
   if (process.platform !== 'win32') throw new Error('Durable scheduling needs Windows Task Scheduler (this is not win32).');
-  // A tiny launcher batch so the task command stays short and cwd is correct.
-  const bat = `@echo off\r\ncd /d "${paths.root}"\r\nnode "${join('scripts', 'control.mjs')}" daily >> "${join('state', 'guai-daily.log')}" 2>&1\r\n`;
+  // A tiny launcher batch so the task command stays short and cwd is correct. Embed the
+  // absolute node path (process.execPath) so the task doesn't depend on Task Scheduler's PATH.
+  const bat = `@echo off\r\ncd /d "${paths.root}"\r\n"${process.execPath}" "${join(paths.root, 'scripts', 'control.mjs')}" daily >> "${join(paths.root, 'state', 'guai-daily.log')}" 2>&1\r\n`;
   writeFileSync(DAILY_CMD, bat);
   const hh = String(hour).padStart(2, '0');
   const mm = String(minute).padStart(2, '0');
@@ -164,14 +165,16 @@ async function main() {
     const enabled = val('--enabled');
     if (!MONITOR_DOMAINS.includes(domain)) return fail(`--domain must be one of ${MONITOR_DOMAINS.join('|')}`);
     if (enabled !== 'true' && enabled !== 'false') return fail('--enabled must be true|false');
-    const next = { ...cfg, monitors: { ...monitorsFlags(cfg), [domain]: enabled === 'true' } };
+    // Spread the existing monitors (not just the 4 known flags) so any custom/future key survives.
+    const next = { ...cfg, monitors: { ...cfg.monitors, [domain]: enabled === 'true' } };
     saveConfig(next);
-    return ok({ ok: true, monitors: next.monitors });
+    return ok({ ok: true, monitors: monitorsFlags(next) });
   }
   if (cmd === 'config-set') {
     let incoming;
     try { incoming = JSON.parse(readStdin()); } catch (e) { return fail('stdin is not valid JSON: ' + e.message); }
-    try { saveConfig(incoming); } catch (e) { return fail(e.message); }
+    // Merge over the current config so a partial payload can't drop unrelated top-level keys.
+    try { saveConfig({ ...cfg, ...incoming }); } catch (e) { return fail(e.message); }
     return ok({ ok: true });
   }
   if (cmd === 'schedule-get') {
@@ -181,7 +184,14 @@ async function main() {
     let incoming;
     try { incoming = JSON.parse(readStdin()); } catch (e) { return fail('stdin is not valid JSON: ' + e.message); }
     const schedule = { ...(cfg.schedule ?? {}), ...incoming };
-    try { saveConfig({ ...cfg, schedule }); } catch (e) { return fail(e.message); }
+    // Mirror the brief time into config.brief (read by arm-cron.mjs for the CC-layer cron),
+    // so the Schedule tab is the single source of truth for "when the daily brief fires".
+    const brief = {
+      ...(cfg.brief ?? {}),
+      hour: schedule.dailyBriefHour ?? cfg.brief?.hour,
+      minute: schedule.dailyBriefMinute ?? cfg.brief?.minute,
+    };
+    try { saveConfig({ ...cfg, schedule, brief }); } catch (e) { return fail(e.message); }
     let durable = { installed: false };
     try {
       if (schedule.enabled && schedule.durable) {

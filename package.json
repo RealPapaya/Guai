@@ -12,6 +12,9 @@
     "sweep": "node --no-warnings scripts/run-sweep.mjs",
     "brief": "node --no-warnings scripts/run-brief.mjs",
     "dashboard": "node --no-warnings scripts/render-dashboard.mjs",
-    "export": "node --no-warnings scripts/db-export.mjs"
+    "export": "node --no-warnings scripts/db-export.mjs",
+    "control": "node --no-warnings scripts/control.mjs",
+    "desktop": "npm --prefix desktop start",
+    "desktop:setup": "npm --prefix desktop install && npm --prefix desktop run make-icon"
   }
 }

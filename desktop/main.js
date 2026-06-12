@@ -7,7 +7,7 @@
 const { app, BrowserWindow, ipcMain, Tray, Menu, Notification, shell, nativeImage } = require('electron');
 const { spawn, execFileSync } = require('node:child_process');
 const { join } = require('node:path');
-const { existsSync } = require('node:fs');
+const { existsSync, writeFileSync } = require('node:fs');
 
 const ROOT = join(__dirname, '..');                 // the Guai repo root
 const CONTROL = join('scripts', 'control.mjs');      // relative to ROOT (cwd of the spawn)
@@ -129,11 +129,17 @@ function scheduleDaily(s) {
   dailyTimer = setTimeout(async () => { await runJob('daily'); scheduleDaily(s); }, ms);
 }
 
+/** Monotonic token: if a newer applySchedule starts while we await, we bail before arming
+ *  so two overlapping calls can't both install timers (orphaning one set). */
+let scheduleGen = 0;
+
 /** Read the persisted schedule and (re)arm in-app timers to match. */
 async function applySchedule() {
+  const myGen = ++scheduleGen;
   clearTimers();
   try {
     const { schedule } = await runControl(['schedule-get']);
+    if (myGen !== scheduleGen) return; // superseded by a newer call — let it own the timers
     armed = !!schedule?.enabled;
     if (armed) {
       scheduleDaily(schedule);
@@ -141,10 +147,10 @@ async function applySchedule() {
       sweepTimer = setInterval(() => runJob('sweep'), everyMs);
     }
   } catch (e) {
-    armed = false;
+    if (myGen === scheduleGen) armed = false;
     console.error('applySchedule failed:', /** @type {Error} */ (e).message);
   }
-  refreshTray();
+  if (myGen === scheduleGen) refreshTray();
 }
 
 // --- tray + window ------------------------------------------------------------
@@ -168,10 +174,13 @@ function refreshTray() {
     {
       label: armed ? 'Deactivate daily report' : 'Activate daily report',
       click: async () => {
-        const { schedule } = await runControl(['schedule-get']);
-        await runControl(['schedule-set'], JSON.stringify({ ...schedule, enabled: !armed }));
-        await applySchedule();
-        if (win && !win.isDestroyed()) win.webContents.send('guai:refreshed');
+        try {
+          // Toggle off the FRESH on-disk state, not the possibly-stale `armed` flag.
+          const { schedule } = await runControl(['schedule-get']);
+          await runControl(['schedule-set'], JSON.stringify({ ...schedule, enabled: !schedule?.enabled }));
+          await applySchedule();
+          if (win && !win.isDestroyed()) win.webContents.send('guai:refreshed');
+        } catch (e) { console.error('tray activate failed:', /** @type {Error} */ (e).message); }
       },
     },
     { type: 'separator' },
@@ -202,12 +211,22 @@ function createWindow() {
   // Closing the window hides to tray (a chief-of-staff lives in the background).
   win.on('close', (e) => { if (!quitting) { e.preventDefault(); win?.hide(); } });
 
-  // Headless smoke test (GUAI_SMOKE=1): surface renderer errors, then self-quit.
+  // Headless smoke test (GUAI_SMOKE=1): surface renderer errors, screenshot, self-quit.
   if (process.env.GUAI_SMOKE) {
     win.webContents.on('console-message', (_e, level, message) => {
       if (level >= 2) console.error('SMOKE renderer error:', message);
     });
-    win.webContents.on('did-finish-load', () => console.log('SMOKE: renderer loaded ok'));
+    win.webContents.on('did-finish-load', () => {
+      console.log('SMOKE: renderer loaded ok');
+      setTimeout(async () => { // let the status IPC round-trip resolve and render first
+        try {
+          const img = await win.webContents.capturePage();
+          const out = join(__dirname, 'assets', 'smoke.png');
+          writeFileSync(out, img.toPNG());
+          console.log('SMOKE: screenshot ' + out);
+        } catch (e) { console.error('SMOKE screenshot failed:', e); }
+      }, 1500);
+    });
   }
 }
 

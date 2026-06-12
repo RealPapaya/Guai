@@ -12,7 +12,7 @@ adds tiered judgment (Opus/Sonnet/Haiku workers), and delivers via push + a morn
 ## Quick start
 
 ```bash
-node --test                       # 63 tests: gate, scoring, ingest, cost, comms, …
+node --test                       # 73 tests: gate, scoring, ingest, cost, comms, control, …
 node scripts/seed-demo.mjs        # a demo project watching me/repo (fixtures)
 node scripts/run-sweep.mjs --dry  # ingest → gate → persist (no network/LLM)
 node scripts/run-brief.mjs        # the executive morning brief, from memory
@@ -22,6 +22,25 @@ node scripts/status.mjs           # current state at a glance
 
 To go live in Claude Code, run **`/guai-setup`**: it authenticates Gmail/Calendar, checks
 your GitHub token, seeds your real projects/repos, and arms the schedule.
+
+## Desktop control panel (`desktop/`)
+
+A small **Electron** app to drive Guai without the terminal: per-domain on/off switches
+(dev · cost · email · calendar), config editing with validation, pending-action review,
+a live status panel, a **Run sweep now** button, and **Activate** — schedule the daily
+report (in-app while open; optionally a durable Windows task that fires even when closed).
+
+```bash
+npm run desktop:setup   # one-time: install Electron + generate the tray icon
+npm run desktop         # launch the app (lives in the tray)
+```
+
+It's **quarantined**: its own `desktop/package.json` (Electron is a dev-only dependency
+there) so the portable core stays zero-dependency. Nothing is imported into Electron —
+the app only ever spawns `node scripts/control.mjs <cmd>`, the JSON bridge, so the DB
+stays single-writer (WAL) and the renderer stays sandboxed (no Node, strict CSP). Like
+everything else in Guai, the GUI only **records** action decisions — sending still goes
+through `/guai-confirm`.
 
 ## The team (tiered intelligence — `.claude/agents/`)
 

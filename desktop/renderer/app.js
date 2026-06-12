@@ -26,9 +26,8 @@ function el(tag, props, ...kids) {
 }
 
 const fmtTime = (ts) => (ts ? new Date(ts).toLocaleString() : '—');
-const ACTION_COLOR = { push: '#d6336c', escalate: '#e8590c', digest: '#6b9bd1', store: '#868e96', ignore: '#ced4da' };
-const SEV_COLOR = ['#9aa', '#6b9bd1', '#e0a800', '#e8590c', '#d6336c'];
-const chip = (txt, color) => el('span', { class: 'chip', style: `background:${color || '#868e96'}` }, txt);
+// Color comes from a CSS class (see styles.css) — no inline styles, so CSP stays strict.
+const chip = (txt, cls) => el('span', { class: 'chip ' + cls }, txt);
 
 /** Unwrap a {ok,data}|{ok:false,error} bridge reply, throwing on error. */
 async function call(promise) {
@@ -86,8 +85,8 @@ async function loadStatus() {
       findings.replaceChildren(el('div', { class: 'empty' }, 'No open findings. 🎉'));
     } else {
       const rows = s.findings.top.map((f) => el('tr', {},
-        el('td', {}, chip(f.action || '?', ACTION_COLOR[f.action])),
-        el('td', {}, chip('S' + f.severity, SEV_COLOR[f.severity])),
+        el('td', {}, chip(f.action || '?', 'a-' + (f.action || 'unknown'))),
+        el('td', {}, chip('S' + f.severity, 'sev-' + (f.severity ?? 0))),
         el('td', { text: String(Math.round(f.priority)) }),
         el('td', { class: 'muted', text: f.source }),
         el('td', { text: f.title }),
@@ -164,8 +163,8 @@ const CONFIG_FIELDS = [
   ['quietHours.end', 'Quiet hours end (0–23)', 'number'],
   ['cost.monthlyBudgetUsd', 'Monthly budget (USD)', 'number'],
   ['cost.expectedDailyUsd', 'Expected daily (USD)', 'number'],
-  ['brief.hour', 'Brief hour (0–23)', 'number'],
-  ['brief.minute', 'Brief minute (0–59)', 'number'],
+  // Brief timing lives on the Schedule tab (config.schedule), not here — avoids a second
+  // control for the same thing. The Schedule tab mirrors it into config.brief for the cron.
   ['github.repos', 'Watched repos (one owner/name per line)', 'repos'],
 ];
 async function loadConfigTab() {
