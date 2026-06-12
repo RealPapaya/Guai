@@ -145,6 +145,11 @@
             <option value="30" selected data-i18n="usage.days30">Last 30 days</option>
             <option value="0" data-i18n="usage.allTime">All time</option>
           </select>
+          <select id="usage-provider" class="lang-select">
+            <option value="" data-i18n="usage.allProviders">All providers</option>
+            <option value="claude">Claude</option>
+            <option value="codex">Codex</option>
+          </select>
           <button id="usage-chart-mini" class="ghost" data-i18n="usage.mini">Desktop card</button>
           <button id="usage-chart-sync" class="ghost" data-i18n="usage.sync">Sync now</button>
           <span id="usage-chart-msg" class="muted"></span>
@@ -152,6 +157,24 @@
         <div id="usage-chart"></div>
         <div id="usage-legend" class="chart-legend"></div>
         <p class="muted" data-i18n="usage.external">Web, mobile, and other-computer usage is reflected in account quota only and cannot be attributed locally.</p>
+        <h2 data-i18n="usage.projectUsage">Project workload usage</h2>
+        <div class="row usage-controls">
+          <select id="usage-project" class="lang-select">
+            <option value="" data-i18n="usage.allProjects">All projects</option>
+          </select>
+          <div id="usage-scope" class="segmented">
+            <button class="active" data-scope="today" data-i18n="usage.scope.today">Today</button>
+            <button data-scope="week" data-i18n="usage.scope.week">This week</button>
+            <button data-scope="month" data-i18n="usage.scope.month">This month</button>
+            <button data-scope="all" data-i18n="usage.scope.all">All time</button>
+          </div>
+        </div>
+        <div id="usage-project-chart"></div>
+        <h2 data-i18n="usage.details">Details</h2>
+        <div id="usage-projects"></div>
+        <h2 data-i18n="usage.sessions">Sessions</h2>
+        <div id="usage-sessions"></div>
+        <div id="usage-detail"></div>
       </div>
     </section>
   </main>
@@ -210,33 +233,42 @@
 
         <!-- USAGE -->
         <section id="set-usage" class="settings-section">
-          <div class="row usage-controls">
-            <button id="usage-sync" class="primary" data-i18n="usage.sync">Sync now</button>
-            <select id="usage-provider" class="lang-select">
+          <p class="muted" data-i18n="usage.settingsIntro">Choose the default presentation and filters used by Status > Usage.</p>
+          <div class="form">
+            <label for="usage-setting-charttype" data-i18n="usage.settings.chartType">Default chart</label>
+            <select id="usage-setting-charttype" class="lang-select">
+              <option value="bar" data-i18n="usage.chart.bar">Bar</option>
+              <option value="line" data-i18n="usage.chart.line">Line</option>
+            </select>
+            <label for="usage-setting-linekind" data-i18n="usage.settings.lineKind">Default line metric</label>
+            <select id="usage-setting-linekind" class="lang-select">
+              <option value="quota" data-i18n="usage.chart.quotaTrend">Quota trend</option>
+              <option value="tokens" data-i18n="usage.chart.dailyTokens">Daily tokens</option>
+            </select>
+            <label for="usage-setting-range" data-i18n="usage.settings.range">Default chart range</label>
+            <select id="usage-setting-range" class="lang-select">
+              <option value="7" data-i18n="usage.days7">Last 7 days</option>
+              <option value="30" data-i18n="usage.days30">Last 30 days</option>
+              <option value="0" data-i18n="usage.allTime">All time</option>
+            </select>
+            <label for="usage-setting-provider" data-i18n="usage.settings.provider">Default provider</label>
+            <select id="usage-setting-provider" class="lang-select">
               <option value="" data-i18n="usage.allProviders">All providers</option>
               <option value="claude">Claude</option>
               <option value="codex">Codex</option>
             </select>
-            <select id="usage-project" class="lang-select">
-              <option value="" data-i18n="usage.allProjects">All projects</option>
+            <label for="usage-setting-scope" data-i18n="usage.settings.scope">Default project scope</label>
+            <select id="usage-setting-scope" class="lang-select">
+              <option value="today" data-i18n="usage.scope.today">Today</option>
+              <option value="week" data-i18n="usage.scope.week">This week</option>
+              <option value="month" data-i18n="usage.scope.month">This month</option>
+              <option value="all" data-i18n="usage.scope.all">All time</option>
             </select>
-            <div id="usage-scope" class="segmented">
-              <button class="active" data-scope="today" data-i18n="usage.scope.today">Today</button>
-              <button data-scope="week" data-i18n="usage.scope.week">This week</button>
-              <button data-scope="month" data-i18n="usage.scope.month">This month</button>
-              <button data-scope="all" data-i18n="usage.scope.all">All time</button>
-            </div>
-            <span id="usage-msg" class="muted"></span>
           </div>
-          <div id="usage-quota" class="cards"></div>
-          <p class="muted" data-i18n="usage.external">Web, mobile, and other-computer usage is reflected in account quota only and cannot be attributed locally.</p>
-          <h2 data-i18n="usage.projectUsage">Project workload usage</h2>
-          <div id="usage-project-chart"></div>
-          <h2 data-i18n="usage.details">Details</h2>
-          <div id="usage-projects"></div>
-          <h2 data-i18n="usage.sessions">Sessions</h2>
-          <div id="usage-sessions"></div>
-          <div id="usage-detail"></div>
+          <div class="row">
+            <button id="usage-settings-save" class="primary" data-i18n="config.save">Save config</button>
+            <span id="usage-settings-msg" class="muted"></span>
+          </div>
         </section>
 
         <!-- SCHEDULE -->

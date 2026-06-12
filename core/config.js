@@ -78,8 +78,21 @@ export function validateConfig(cfg) {
 
   if (cfg.ui !== undefined) {
     if (!isObj(cfg.ui)) errors.push('ui must be an object');
-    else if (cfg.ui.language !== undefined && !UI_LANGUAGES.includes(cfg.ui.language))
-      errors.push(`ui.language must be one of ${UI_LANGUAGES.join('|')}`);
+    else {
+      if (cfg.ui.language !== undefined && !UI_LANGUAGES.includes(cfg.ui.language))
+        errors.push(`ui.language must be one of ${UI_LANGUAGES.join('|')}`);
+      if (cfg.ui.usage !== undefined) {
+        const u = cfg.ui.usage;
+        if (!isObj(u)) errors.push('ui.usage must be an object');
+        else {
+          if (u.chartType !== undefined && !['bar', 'line'].includes(u.chartType)) errors.push('ui.usage.chartType must be bar|line');
+          if (u.lineKind !== undefined && !['quota', 'tokens'].includes(u.lineKind)) errors.push('ui.usage.lineKind must be quota|tokens');
+          if (u.rangeDays !== undefined && ![0, 7, 30].includes(u.rangeDays)) errors.push('ui.usage.rangeDays must be 0|7|30');
+          if (u.provider !== undefined && !['', 'claude', 'codex'].includes(u.provider)) errors.push('ui.usage.provider must be empty|claude|codex');
+          if (u.scope !== undefined && !['today', 'week', 'month', 'all'].includes(u.scope)) errors.push('ui.usage.scope must be today|week|month|all');
+        }
+      }
+    }
   }
 
   if (cfg.schedule !== undefined) {

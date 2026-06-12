@@ -50,6 +50,14 @@ test('validateConfig accepts a known ui.language, rejects an unknown one', () =>
   assert.deepEqual(UI_LANGUAGES, ['en', 'zh-TW']);
 });
 
+test('validateConfig accepts known usage presentation preferences', () => {
+  assert.equal(validateConfig({ ...base, ui: { ...base.ui, usage: {
+    chartType: 'line', lineKind: 'tokens', rangeDays: 7, provider: 'codex', scope: 'month',
+  } } }).ok, true);
+  assert.equal(validateConfig({ ...base, ui: { ...base.ui, usage: { chartType: 'pie' } } }).ok, false);
+  assert.equal(validateConfig({ ...base, ui: { ...base.ui, usage: { scope: 'year' } } }).ok, false);
+});
+
 // ---- secrets status (never exposes a raw value) -----------------------------
 
 test('SECRET_NAMES covers the manageable token accounts', () => {

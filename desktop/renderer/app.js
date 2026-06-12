@@ -200,6 +200,12 @@ const I18N = {
     'usage.details': 'Details',
     'usage.share': 'Share',
     'usage.noProjectUsage': 'No project usage in this scope.',
+    'usage.settingsIntro': 'Choose the default presentation and filters used by Status > Usage.',
+    'usage.settings.chartType': 'Default chart',
+    'usage.settings.lineKind': 'Default line metric',
+    'usage.settings.range': 'Default chart range',
+    'usage.settings.provider': 'Default provider',
+    'usage.settings.scope': 'Default project scope',
     'usage.projects': 'Projects',
     'usage.sessions': 'Sessions',
     'usage.none': 'No local Claude/Codex sessions found.',
@@ -394,6 +400,12 @@ const I18N = {
     'usage.details': '細節',
     'usage.share': '比例',
     'usage.noProjectUsage': '此範圍內尚無專案用量。',
+    'usage.settingsIntro': '設定「狀態 > 用量」預設使用的顯示方式與篩選條件。',
+    'usage.settings.chartType': '預設圖表',
+    'usage.settings.lineKind': '預設折線內容',
+    'usage.settings.range': '預設圖表範圍',
+    'usage.settings.provider': '預設供應商',
+    'usage.settings.scope': '預設專案範圍',
     'usage.projects': '專案',
     'usage.sessions': '工作階段',
     'usage.none': '尚未找到本機 Claude/Codex 工作階段。',
@@ -512,7 +524,7 @@ function activate(name) {
 $$('.tab').forEach((t) => t.addEventListener('click', () => activate(/** @type {string} */(t.dataset.tab))));
 
 // Settings full-screen view. Reuses the original tab loaders verbatim — only relocated.
-const SETTINGS_LOADERS = { general: loadConfigTab, accounts: loadAccounts, usage: loadUsage, schedule: loadSchedule };
+const SETTINGS_LOADERS = { general: loadConfigTab, accounts: loadAccounts, usage: loadUsageSettings, schedule: loadSchedule };
 let lastSettings = 'general';
 function activateSettings(section) {
   $$('.set-nav-item').forEach((n) => n.classList.toggle('active', n.dataset.set === section));
@@ -768,28 +780,6 @@ $('#identity-save').addEventListener('click', async () => {
 
 const fmtTokens = (n) => new Intl.NumberFormat(LANG, { notation: Number(n) >= 100000 ? 'compact' : 'standard', maximumFractionDigits: 1 }).format(Number(n) || 0);
 
-function usageQuotaCard(q) {
-  const used = q.used_percent == null ? '?' : `${Math.round(q.used_percent)}%`;
-  return el('div', { class: 'card' },
-    el('div', { class: 'big', text: used }),
-    el('div', { class: 'label', text: t('usage.quota', { provider: q.provider, window: q.window_name }) }),
-    el('div', { class: 'meta', text: q.resets_at ? t('usage.resets', { time: fmtTime(q.resets_at) }) : '' }));
-}
-
-function usageTotalCard(x) {
-  return el('div', { class: 'card' },
-    el('div', { class: 'big', text: fmtTokens(x.total_tokens) }),
-    el('div', { class: 'label', text: `${x.provider} ${t('usage.tokens')}` }),
-    el('div', { class: 'meta', text: `${x.sessions} ${t('usage.sessions')} / ${x.projects} ${t('usage.projects')}` }));
-}
-
-function usageAccountCard(a) {
-  return el('div', { class: 'card' },
-    el('div', { class: 'big provider-name', text: a.provider }),
-    el('div', { class: 'label', text: `${a.plan_type || '?'} / ${a.status}` }),
-    el('div', { class: 'meta', text: a.last_sync_at ? fmtTime(a.last_sync_at) : '' }));
-}
-
 let usageScope = 'today';
 
 function usageScopeSince() {
@@ -840,22 +830,21 @@ async function showUsageSession(provider, id) {
   } catch (e) { wrap.replaceChildren(el('div', { class: 'err', text: e.message })); }
 }
 
-async function loadUsage() {
-  const quota = $('#usage-quota'); const projects = $('#usage-projects'); const sessionsWrap = $('#usage-sessions');
+async function loadStatusUsageDetails() {
+  const projects = $('#usage-projects'); const sessionsWrap = $('#usage-sessions');
   try {
-    const summary = await call(api.usageSummary());
-    quota.replaceChildren(...summary.accounts.map(usageAccountCard), ...summary.quota.map(usageQuotaCard), ...summary.totals.map(usageTotalCard));
+    const provider = /** @type {HTMLSelectElement} */ ($('#usage-provider')).value;
+    const since = usageScopeSince();
     const projectSelect = /** @type {HTMLSelectElement} */ ($('#usage-project'));
     const selected = projectSelect.value;
+    const availableProjects = await call(api.usageProjects({ provider: provider || null, since }));
     projectSelect.replaceChildren(el('option', { value: '', text: t('usage.allProjects') }),
-      ...summary.projects.map((p) => el('option', { value: p.id, text: p.name })));
-    projectSelect.value = selected;
-    const provider = /** @type {HTMLSelectElement} */ ($('#usage-provider')).value;
+      ...availableProjects.map((p) => el('option', { value: p.id, text: p.name })));
+    projectSelect.value = availableProjects.some((p) => String(p.id) === selected) ? selected : '';
     const projectId = /** @type {HTMLSelectElement} */ ($('#usage-project')).value;
-    const since = usageScopeSince();
-    const projectUsage = await call(api.usageProjects({
-      provider: provider || null, projectId: projectId ? Number(projectId) : null, since,
-    }));
+    const projectUsage = projectId ? await call(api.usageProjects({
+      provider: provider || null, projectId: Number(projectId), since,
+    })) : availableProjects;
     renderProjectUsage(projectUsage);
     const projectRows = projectUsage.map((p) => el('tr', {},
       el('td', { text: p.name }), el('td', { text: String(p.sessions) }),
@@ -878,23 +867,16 @@ async function loadUsage() {
       el('thead', {}, el('tr', {}, ...[t('usage.session'), t('usage.provider'), t('usage.project'), 'Model', t('usage.tokens'), t('usage.updated')].map((h) => el('th', { text: h })))),
       el('tbody', {}, ...sessionRows)) : el('div', { class: 'empty', text: t('usage.none') }));
   } catch (e) {
-    quota.replaceChildren(el('div', { class: 'err', text: e.message }));
-    projects.replaceChildren(); sessionsWrap.replaceChildren();
+    projects.replaceChildren(el('div', { class: 'err', text: e.message })); sessionsWrap.replaceChildren();
   }
 }
 
-$('#usage-sync').addEventListener('click', async () => {
-  const btn = /** @type {HTMLButtonElement} */ ($('#usage-sync')); const msg = $('#usage-msg');
-  btn.disabled = true; msg.textContent = t('usage.syncing');
-  try { await call(api.syncUsage()); flash(msg, t('usage.done'), false); await loadUsage(); }
-  catch (e) { flash(msg, e.message, true); }
-  finally { btn.disabled = false; }
-});
-for (const id of ['usage-provider', 'usage-project']) $('#' + id).addEventListener('change', loadUsage);
+$('#usage-provider').addEventListener('change', loadStatusUsage);
+$('#usage-project').addEventListener('change', loadStatusUsageDetails);
 $$('#usage-scope button').forEach((b) => b.addEventListener('click', () => {
   usageScope = /** @type {string} */ (b.dataset.scope);
   $$('#usage-scope button').forEach((x) => x.classList.toggle('active', x === b));
-  loadUsage();
+  loadStatusUsageDetails();
 }));
 
 // --- STATUS → USAGE charts ----------------------------------------------------
@@ -925,12 +907,52 @@ let usageChartType = 'bar';   // 'bar' | 'line'
 let usageLineKind = 'quota';  // 'quota' | 'tokens'
 /** @type {any} */ let usageChartData = null;
 
+function applyUsagePreferences(prefs = {}) {
+  usageChartType = prefs.chartType === 'line' ? 'line' : 'bar';
+  usageLineKind = prefs.lineKind === 'tokens' ? 'tokens' : 'quota';
+  usageScope = ['today', 'week', 'month', 'all'].includes(prefs.scope) ? prefs.scope : 'today';
+  /** @type {HTMLSelectElement} */ ($('#usage-chart-range')).value = String([0, 7, 30].includes(prefs.rangeDays) ? prefs.rangeDays : 30);
+  /** @type {HTMLSelectElement} */ ($('#usage-provider')).value = ['claude', 'codex'].includes(prefs.provider) ? prefs.provider : '';
+  $$('#usage-charttype button').forEach((b) => b.classList.toggle('active', b.dataset.charttype === usageChartType));
+  $$('#usage-linekind button').forEach((b) => b.classList.toggle('active', b.dataset.linekind === usageLineKind));
+  $$('#usage-scope button').forEach((b) => b.classList.toggle('active', b.dataset.scope === usageScope));
+}
+
+async function loadUsageSettings() {
+  const cfg = await call(api.getConfig());
+  const u = cfg?.ui?.usage || {};
+  /** @type {HTMLSelectElement} */ ($('#usage-setting-charttype')).value = u.chartType || 'bar';
+  /** @type {HTMLSelectElement} */ ($('#usage-setting-linekind')).value = u.lineKind || 'quota';
+  /** @type {HTMLSelectElement} */ ($('#usage-setting-range')).value = String(u.rangeDays ?? 30);
+  /** @type {HTMLSelectElement} */ ($('#usage-setting-provider')).value = u.provider || '';
+  /** @type {HTMLSelectElement} */ ($('#usage-setting-scope')).value = u.scope || 'today';
+}
+
+$('#usage-settings-save').addEventListener('click', async () => {
+  const msg = $('#usage-settings-msg');
+  try {
+    const cfg = await call(api.getConfig());
+    const usage = {
+      chartType: /** @type {HTMLSelectElement} */ ($('#usage-setting-charttype')).value,
+      lineKind: /** @type {HTMLSelectElement} */ ($('#usage-setting-linekind')).value,
+      rangeDays: Number(/** @type {HTMLSelectElement} */ ($('#usage-setting-range')).value),
+      provider: /** @type {HTMLSelectElement} */ ($('#usage-setting-provider')).value,
+      scope: /** @type {HTMLSelectElement} */ ($('#usage-setting-scope')).value,
+    };
+    cfg.ui = { ...(cfg.ui || {}), usage };
+    await call(api.saveConfig(cfg));
+    applyUsagePreferences(usage);
+    flash(msg, t('saved'), false);
+  } catch (e) { flash(msg, e.message, true); }
+});
+
 async function loadStatusUsage() {
   const msg = $('#usage-chart-msg');
   const days = Number(/** @type {HTMLSelectElement} */ ($('#usage-chart-range')).value) || 0;
   try {
     usageChartData = await call(api.usageCharts({ days }));
     renderUsageChart();
+    await loadStatusUsageDetails();
   } catch (e) { msg.textContent = ''; $('#usage-chart').replaceChildren(el('div', { class: 'err', text: e.message })); }
 }
 
@@ -945,7 +967,8 @@ function renderUsageBars() {
   const wrap = $('#usage-chart'); const legend = $('#usage-legend');
   legend.replaceChildren();
   const data = usageChartData || {};
-  const rows = data.quota || [];
+  const provider = /** @type {HTMLSelectElement} */ ($('#usage-provider')).value;
+  const rows = (data.quota || []).filter((r) => !provider || r.provider === provider);
   if (!rows.length) { wrap.replaceChildren(el('div', { class: 'empty', text: t('usage.noQuota') })); return; }
   const accounts = Object.fromEntries((data.accounts || []).map((a) => [a.provider, a]));
   const byProv = {};
@@ -982,11 +1005,12 @@ function renderUsageBars() {
 function renderUsageLine() {
   const wrap = $('#usage-chart'); const legend = $('#usage-legend');
   const data = usageChartData || {};
+  const provider = /** @type {HTMLSelectElement} */ ($('#usage-provider')).value;
   /** @type {{key:string,label:string,color:string,brand:string,icon:string,pts:[number,number][]}[]} */
   let series = []; let opts;
 
   if (usageLineKind === 'quota') {
-    const hist = (data.quotaHistory || []).filter((r) => r.used_percent != null);
+    const hist = (data.quotaHistory || []).filter((r) => r.used_percent != null && (!provider || r.provider === provider));
     const groups = {};
     for (const r of hist) {
       const kind = windowKind(r); const key = `${r.provider}:${kind}`;
@@ -1001,7 +1025,7 @@ function renderUsageLine() {
     }));
     opts = { xMin, xMax, yMin: 0, yMax: 100, yTicks: [0, 25, 50, 75, 100], yFmt: (v) => `${v}%`, xFmt: fmtDay };
   } else {
-    const daily = data.daily || [];
+    const daily = (data.daily || []).filter((r) => !provider || r.provider === provider);
     const groups = {};
     for (const r of daily) (groups[r.provider] ||= []).push(r);
     const days = [...new Set(daily.map((r) => r.day))].sort();
@@ -1356,7 +1380,7 @@ $('#job-add').addEventListener('click', () => {
 
 $('#lang-select').addEventListener('change', (e) => setLang(/** @type {HTMLSelectElement} */ (e.target).value, true));
 api.onRefreshed(() => {
-  if (document.body.classList.contains('settings-open')) { if (lastSettings === 'usage') loadUsage(); return; }
+  if (document.body.classList.contains('settings-open')) { if (lastSettings === 'usage') loadUsageSettings(); return; }
   if (lastTab === 'status') activateStatusSub(lastStatusSub);
 });
 
@@ -1364,6 +1388,7 @@ api.onRefreshed(() => {
   try {
     const cfg = await call(api.getConfig());
     LANG = cfg?.ui?.language === 'zh-TW' ? 'zh-TW' : 'en';
+    applyUsagePreferences(cfg?.ui?.usage || {});
   } catch { /* default to English if config can't be read */ }
   /** @type {HTMLSelectElement} */ ($('#lang-select')).value = LANG;
   applyI18n();
