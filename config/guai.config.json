@@ -1,0 +1,77 @@
+{
+  "owner": "ptr0905@gmail.com",
+  "timezone": "local",
+  "quietHours": { "start": 21, "end": 7 },
+
+  "push": {
+    "maxPerHour": 3,
+    "maxPerDay": 12,
+    "cooldownMinutesPerFingerprint": 180,
+    "maxChars": 200
+  },
+
+  "gate": {
+    "pushThreshold": 5,
+    "evFloor": 0,
+    "researchEV": 3,
+    "crossDomainSeverity": 4,
+    "urgentWindowHours": 24,
+    "weights": {
+      "project": 2,
+      "deadline": 2,
+      "trend": 1.5,
+      "seenDecay": 1
+    }
+  },
+
+  "impactWeights": {
+    "blocking_release": 5,
+    "money_at_risk": 4,
+    "cost_anomaly": 4,
+    "ci_failure": 3,
+    "needs_reply": 3,
+    "calendar_conflict": 3,
+    "review_backlog": 2,
+    "opportunity": 2,
+    "stale_pr": 1,
+    "fyi": 0
+  },
+
+  "github": {
+    "apiBase": "https://api.github.com",
+    "repos": [],
+    "stalePrDays": 7,
+    "staleBranchDays": 30,
+    "perPage": 50
+  },
+
+  "cost": {
+    "source": "cc-stats",
+    "monthlyBudgetUsd": 900,
+    "expectedDailyUsd": 30,
+    "anomalyStdDevK": 2,
+    "dodJumpPct": 75,
+    "baselineWindowDays": 14,
+    "pricing": {
+      "_comment": "ESTIMATED blended USD per 1M tokens — Claude Code reports costUSD=0 on subscription, so $ is derived for trend/anomaly detection only. Tune to your plan. Token counts are the reliable primary metric.",
+      "claude-opus-4-8": 30,
+      "claude-opus-4-7": 30,
+      "claude-sonnet-4-6": 6,
+      "claude-haiku-4-5-20251001": 1.5,
+      "default": 10
+    }
+  },
+
+  "brief": {
+    "hour": 7,
+    "minute": 57,
+    "freshnessMinutes": 90,
+    "weekdaysOnly": true
+  },
+
+  "condenser": {
+    "resolvedFindingAgeDays": 14,
+    "runLogAgeDays": 30,
+    "maxOpenContextItems": 200
+  }
+}

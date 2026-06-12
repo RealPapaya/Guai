@@ -1,0 +1,42 @@
+[
+  {
+    "number": 1,
+    "title": "Refactor auth middleware",
+    "html_url": "https://github.com/me/repo/pull/1",
+    "draft": false,
+    "user": { "login": "alice" },
+    "created_at": "2023-10-20T00:00:00Z",
+    "updated_at": "2023-10-25T00:00:00Z",
+    "requested_reviewers": []
+  },
+  {
+    "number": 2,
+    "title": "Add rate limiting",
+    "html_url": "https://github.com/me/repo/pull/2",
+    "draft": false,
+    "user": { "login": "bob" },
+    "created_at": "2023-11-09T00:00:00Z",
+    "updated_at": "2023-11-09T00:00:00Z",
+    "requested_reviewers": [{ "login": "carol" }]
+  },
+  {
+    "number": 3,
+    "title": "Fix typo in README",
+    "html_url": "https://github.com/me/repo/pull/3",
+    "draft": false,
+    "user": { "login": "dave" },
+    "created_at": "2023-11-13T00:00:00Z",
+    "updated_at": "2023-11-13T00:00:00Z",
+    "requested_reviewers": []
+  },
+  {
+    "number": 4,
+    "title": "WIP: new billing engine",
+    "html_url": "https://github.com/me/repo/pull/4",
+    "draft": true,
+    "user": { "login": "alice" },
+    "created_at": "2023-10-05T00:00:00Z",
+    "updated_at": "2023-10-05T00:00:00Z",
+    "requested_reviewers": []
+  }
+]

@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Runtime state (SQLite DB + WAL + rendered artifacts)
+state/guai.db
+state/guai.db-shm
+state/guai.db-wal
+state/dashboard.html
+state/*.md
+state/snapshots/*.json
+state/inbox/*
+!state/inbox/.gitkeep
+!state/snapshots/.gitkeep
+
+# Secrets — NEVER commit. Prefer env vars / Windows Credential Manager.
+secrets.json
+state/secrets.json
+config/secrets.json
+
+# Logs / scratch
+*.log
+.DS_Store

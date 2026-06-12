@@ -1,0 +1,17 @@
+{
+  "name": "guai",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Guai — an autonomous personal AI chief of staff (hybrid: portable Node core + Claude Code native layer).",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "test": "node --test --no-warnings",
+    "sweep": "node --no-warnings scripts/run-sweep.mjs",
+    "brief": "node --no-warnings scripts/run-brief.mjs",
+    "dashboard": "node --no-warnings scripts/render-dashboard.mjs",
+    "export": "node --no-warnings scripts/db-export.mjs"
+  }
+}

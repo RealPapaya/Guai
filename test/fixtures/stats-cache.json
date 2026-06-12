@@ -1,0 +1,14 @@
+{
+  "version": 3,
+  "lastComputedDate": "2026-06-11",
+  "dailyModelTokens": [
+    { "date": "2026-06-04", "tokensByModel": { "claude-sonnet-4-6": 190000 } },
+    { "date": "2026-06-05", "tokensByModel": { "claude-sonnet-4-6": 210000 } },
+    { "date": "2026-06-06", "tokensByModel": { "claude-sonnet-4-6": 175000 } },
+    { "date": "2026-06-07", "tokensByModel": { "claude-sonnet-4-6": 205000 } },
+    { "date": "2026-06-08", "tokensByModel": { "claude-sonnet-4-6": 195000 } },
+    { "date": "2026-06-09", "tokensByModel": { "claude-sonnet-4-6": 200000 } },
+    { "date": "2026-06-10", "tokensByModel": { "claude-sonnet-4-6": 188000 } },
+    { "date": "2026-06-11", "tokensByModel": { "claude-opus-4-8": 2000000, "claude-haiku-4-5-20251001": 120000 } }
+  ]
+}
