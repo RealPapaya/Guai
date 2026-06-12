@@ -20,3 +20,5 @@ config/secrets.json
 # Logs / scratch
 *.log
 .DS_Store
+__pycache__/
+*.pyc

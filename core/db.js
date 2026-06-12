@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SCHEMA_PATH = join(HERE, 'schema.sql');
-const SCHEMA_VERSION = '1';
+const SCHEMA_VERSION = '2';
 
 /**
  * Open (and migrate) the Guai database.

@@ -38,7 +38,7 @@ export const UI_LANGUAGES = ['en', 'zh-TW'];
 /** Token-style secrets the Accounts page may manage in state/secrets.json.
  *  Gmail/Calendar are deliberately absent — they use the Claude Code MCP OAuth
  *  handshake, so no token is stored locally. */
-export const SECRET_NAMES = ['GITHUB_TOKEN', 'LINE_TOKEN', 'ANTHROPIC_API_KEY', 'OPENAI_API_KEY'];
+export const SECRET_NAMES = ['GITHUB_TOKEN', 'LINE_TOKEN', 'ANTHROPIC_API_KEY', 'OPENAI_API_KEY', 'GUAI_SIDECAR_TOKEN'];
 
 /** A disabled flag must be EXPLICITLY false — absent/unknown defaults to enabled,
  *  so an older config (no `monitors` block) keeps monitoring everything. */
@@ -132,6 +132,17 @@ export function validateConfig(cfg) {
     else {
       if (c.monthlyBudgetUsd !== undefined) numIn('cost.monthlyBudgetUsd', c.monthlyBudgetUsd, 0, 1e7);
       if (c.expectedDailyUsd !== undefined) numIn('cost.expectedDailyUsd', c.expectedDailyUsd, 0, 1e6);
+    }
+  }
+
+  if (cfg.sidecar !== undefined) {
+    const s = cfg.sidecar;
+    if (!isObj(s)) errors.push('sidecar must be an object');
+    else {
+      if (s.enabled !== undefined && typeof s.enabled !== 'boolean') errors.push('sidecar.enabled must be a boolean');
+      if (s.baseUrl !== undefined && (typeof s.baseUrl !== 'string' || !/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/i.test(s.baseUrl)))
+        errors.push('sidecar.baseUrl must be a localhost HTTP URL');
+      if (s.timeoutMs !== undefined) numIn('sidecar.timeoutMs', s.timeoutMs, 1000, 3600000);
     }
   }
 

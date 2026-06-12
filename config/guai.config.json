@@ -22,6 +22,11 @@
     "weekdaysOnly": true,
     "durable": false
   },
+  "sidecar": {
+    "enabled": true,
+    "baseUrl": "http://127.0.0.1:8765",
+    "timeoutMs": 120000
+  },
   "push": {
     "maxPerHour": 3,
     "maxPerDay": 12,

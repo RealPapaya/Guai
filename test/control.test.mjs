@@ -53,7 +53,7 @@ test('validateConfig accepts a known ui.language, rejects an unknown one', () =>
 // ---- secrets status (never exposes a raw value) -----------------------------
 
 test('SECRET_NAMES covers the manageable token accounts', () => {
-  assert.deepEqual(SECRET_NAMES, ['GITHUB_TOKEN', 'LINE_TOKEN', 'ANTHROPIC_API_KEY', 'OPENAI_API_KEY']);
+  assert.deepEqual(SECRET_NAMES, ['GITHUB_TOKEN', 'LINE_TOKEN', 'ANTHROPIC_API_KEY', 'OPENAI_API_KEY', 'GUAI_SIDECAR_TOKEN']);
 });
 
 test('secretStatus reports the env source and exposes no value', () => {

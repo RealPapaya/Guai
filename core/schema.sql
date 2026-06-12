@@ -158,3 +158,44 @@ CREATE TABLE IF NOT EXISTS history_digest (
   summary      TEXT NOT NULL,
   created_at   INTEGER NOT NULL
 );
+
+-- AGENT TASKS: work delegated to the execution sidecar.
+CREATE TABLE IF NOT EXISTS agent_tasks (
+  task_id          TEXT PRIMARY KEY,
+  parent_task_id   TEXT,
+  task_type        TEXT NOT NULL,
+  objective        TEXT NOT NULL,
+  difficulty       TEXT NOT NULL,
+  risk_level       INTEGER NOT NULL,
+  worker           TEXT,
+  status           TEXT NOT NULL,
+  envelope_json    TEXT NOT NULL,
+  result_json      TEXT,
+  error            TEXT,
+  created_at       INTEGER NOT NULL,
+  updated_at       INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_agent_tasks_status ON agent_tasks(status);
+
+-- EXECUTION TRACES: Guai-owned index of sidecar executions and outcomes.
+CREATE TABLE IF NOT EXISTS execution_traces (
+  id             INTEGER PRIMARY KEY,
+  trace_id       TEXT NOT NULL UNIQUE,
+  task_id        TEXT REFERENCES agent_tasks(task_id),
+  worker         TEXT,
+  status         TEXT NOT NULL,
+  metrics_json   TEXT,
+  outcome_json   TEXT,
+  recorded_at    INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_execution_traces_task ON execution_traces(task_id);
+
+-- COMPONENT CATALOG: last known worker agents/tools/skills/memory backends.
+CREATE TABLE IF NOT EXISTS component_catalog (
+  kind           TEXT NOT NULL,
+  name           TEXT NOT NULL,
+  metadata_json  TEXT,
+  source         TEXT NOT NULL DEFAULT 'worker-sidecar',
+  synced_at      INTEGER NOT NULL,
+  PRIMARY KEY(kind, name)
+);

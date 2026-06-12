@@ -278,6 +278,58 @@ export function openMemory(dbPath) {
                 VALUES(?,?,?,?)`).run(window_start, window_end, summary, now()).lastInsertRowid;
     },
 
+    // ---- delegated agent tasks + execution traces -----------------------
+    createAgentTask(task, status = 'queued') {
+      const t = now();
+      q(`INSERT INTO agent_tasks
+          (task_id,parent_task_id,task_type,objective,difficulty,risk_level,worker,status,envelope_json,created_at,updated_at)
+          VALUES(?,?,?,?,?,?,?,?,?,?,?)`)
+        .run(task.taskId, task.parentTaskId ?? null, task.taskType, task.objective,
+          task.difficulty, task.riskLevel, task.preferredWorker ?? null, status, J(task), t, t);
+      return task.taskId;
+    },
+    updateAgentTask(taskId, { status, result = null, error = null, worker = null }) {
+      q(`UPDATE agent_tasks SET status=?, result_json=?, error=?,
+           worker=COALESCE(?,worker), updated_at=? WHERE task_id=?`)
+        .run(status, J(result), error, worker, now(), taskId);
+    },
+    agentTasks(limit = 50) {
+      return q('SELECT * FROM agent_tasks ORDER BY updated_at DESC LIMIT ?').all(limit)
+        .map((r) => parse(r, 'envelope_json', 'result_json'));
+    },
+    addExecutionTrace({ traceId, taskId = null, worker = null, status, metrics = null, outcome = null }) {
+      return q(`INSERT INTO execution_traces(trace_id,task_id,worker,status,metrics_json,outcome_json,recorded_at)
+                VALUES(?,?,?,?,?,?,?)
+                ON CONFLICT(trace_id) DO UPDATE SET status=excluded.status,
+                  metrics_json=excluded.metrics_json, outcome_json=excluded.outcome_json`)
+        .run(traceId, taskId, worker, status, J(metrics), J(outcome), now()).lastInsertRowid;
+    },
+    executionTraces(limit = 50) {
+      return q('SELECT * FROM execution_traces ORDER BY recorded_at DESC LIMIT ?').all(limit)
+        .map((r) => parse(r, 'metrics_json', 'outcome_json'));
+    },
+    syncComponentCatalog(catalog, source = 'worker-sidecar') {
+      const t = now();
+      let count = 0;
+      for (const [kind, entries] of Object.entries(catalog ?? {})) {
+        for (const entry of entries ?? []) {
+          const name = typeof entry === 'string' ? entry : entry.name;
+          if (!name) continue;
+          q(`INSERT INTO component_catalog(kind,name,metadata_json,source,synced_at)
+             VALUES(?,?,?,?,?)
+             ON CONFLICT(kind,name) DO UPDATE SET metadata_json=excluded.metadata_json,
+               source=excluded.source,synced_at=excluded.synced_at`)
+            .run(kind, name, J(typeof entry === 'string' ? {} : entry), source, t);
+          count++;
+        }
+      }
+      return count;
+    },
+    componentCatalog() {
+      return q('SELECT * FROM component_catalog ORDER BY kind,name').all()
+        .map((r) => parse(r, 'metadata_json'));
+    },
+
     // ---- the stateful-across-ticks read ----------------------------------
     /** Everything a monitoring run needs at startup. */
     loadRunContext(sinceTs = null) {
@@ -310,6 +362,9 @@ export function openMemory(dbPath) {
         comms_log: all('comms_log'),
         run_log: all('run_log'),
         watch_targets: all('watch_targets'),
+        agent_tasks: all('agent_tasks'),
+        execution_traces: all('execution_traces'),
+        component_catalog: all('component_catalog'),
       };
     },
   };

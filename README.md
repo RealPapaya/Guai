@@ -20,6 +20,26 @@ node scripts/render-dashboard.mjs # state/dashboard.html — open in any browser
 node scripts/status.mjs           # current state at a glance
 ```
 
+## Worker execution sidecar
+
+Guai remains the source of truth and safety boundary. Workers receive a strict
+task envelope and return findings plus proposed actions. Findings always pass through
+Guai's deterministic gate; proposed actions are queued for confirmation and are never
+executed by the sidecar.
+
+```bash
+npm run sidecar                 # start localhost-only worker bridge
+npm run sidecar:sync            # import agents/tools/skills/operators catalog
+npm run research -- "question"  # delegate one persistent, traced research task
+node scripts/control.mjs tasks
+node scripts/control.mjs traces
+node scripts/control.mjs catalog
+```
+
+The sidecar imports the worker package from its default local checkout. Override with
+`GUAI_WORKER_ROOT`, `GUAI_WORKER_CONFIG`, or `GUAI_SIDECAR_PORT`. Set
+`GUAI_SIDECAR_TOKEN` on both processes to require bearer authentication.
+
 To go live in Claude Code, run **`/guai-setup`**: it authenticates Gmail/Calendar, checks
 your GitHub token, seeds your real projects/repos, and arms the schedule.
 

@@ -35,6 +35,7 @@ import {
 import { runSweep } from '../core/sweep.js';
 import { buildBriefModel, renderBrief } from '../core/render/brief.js';
 import { renderDashboard } from '../core/render/dashboard.js';
+import { SidecarClient } from '../core/sidecar.js';
 
 const TASK_NAME = 'Guai-DailyBrief';
 const DAILY_CMD = join(paths.root, 'state', 'guai-daily.cmd');
@@ -161,6 +162,18 @@ function statusPayload(mem, cfg) {
     lastRun: mem.lastRunEndedAt() || null,
     lastBrief: mem.lastBriefTs() || null,
     taskScheduler: taskQuery(),
+    delegated: {
+      tasks: mem.agentTasks(12).map((t) => ({
+        taskId: t.task_id, objective: t.objective, worker: t.worker,
+        status: t.status, difficulty: t.difficulty, riskLevel: t.risk_level,
+        updatedAt: t.updated_at,
+      })),
+      recentTraces: mem.executionTraces(12).map((t) => ({
+        traceId: t.trace_id, taskId: t.task_id, worker: t.worker,
+        status: t.status, recordedAt: t.recorded_at,
+      })),
+      catalogSize: mem.componentCatalog().length,
+    },
   };
 }
 
@@ -201,6 +214,10 @@ async function main() {
   if (cmd === 'schedule-get') {
     return ok({ schedule: cfg.schedule ?? null, taskScheduler: taskQuery() });
   }
+  if (cmd === 'sidecar-health') {
+    if (cfg.sidecar?.enabled === false) return fail('Worker sidecar is disabled in config.');
+    return ok(await new SidecarClient(cfg.sidecar).health());
+  }
   if (cmd === 'schedule-set') {
     let incoming;
     try { incoming = JSON.parse(readStdin()); } catch (e) { return fail('stdin is not valid JSON: ' + e.message); }
@@ -238,6 +255,14 @@ async function main() {
       case 'brief': return ok(doBrief(mem, cfg, { save: has('--save') }));
       case 'dashboard': return ok(doDashboard(mem, cfg));
       case 'actions': return ok(mem.pendingActions());
+      case 'tasks': return ok(mem.agentTasks());
+      case 'traces': return ok(mem.executionTraces());
+      case 'catalog': return ok(mem.componentCatalog());
+      case 'sidecar-sync': {
+        if (cfg.sidecar?.enabled === false) return fail('Worker sidecar is disabled in config.');
+        const catalog = await new SidecarClient(cfg.sidecar).catalog();
+        return ok({ synced: mem.syncComponentCatalog(catalog), catalog });
+      }
       case 'daily': {
         const sweep = await doSweep(mem, cfg, { dry: false });
         const brief = doBrief(mem, cfg, { save: true });

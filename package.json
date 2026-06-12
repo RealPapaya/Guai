@@ -14,6 +14,9 @@
     "dashboard": "node --no-warnings scripts/render-dashboard.mjs",
     "export": "node --no-warnings scripts/db-export.mjs",
     "control": "node --no-warnings scripts/control.mjs",
+    "sidecar": "python sidecar/worker_bridge.py",
+    "sidecar:sync": "node --no-warnings scripts/sync-worker.mjs",
+    "research": "node --no-warnings scripts/run-researcher.mjs",
     "desktop": "npm --prefix desktop start",
     "desktop:setup": "npm --prefix desktop install && npm --prefix desktop run make-icon"
   }

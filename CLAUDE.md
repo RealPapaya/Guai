@@ -14,6 +14,9 @@ This is a **hybrid** system:
 - **Native CC layer** (`.claude/skills/`, `agents/`, `workflows/`): the live-autonomy
   shell. Cron wakes it, subagents (tiered Opus/Sonnet/Haiku) supply judgment, MCP
   Gmail/Calendar + GitHub REST supply data, `PushNotification` delivers urgent items.
+- **Worker sidecar** (`sidecar/`, `core/sidecar.js`): optional execution plane for
+  persistent/tool-using workers. It never writes Guai memory directly; returned findings
+  and actions must cross `core/worker-results.js` and the deterministic gate.
 
 ## The split that makes this work
 
@@ -54,6 +57,8 @@ friction); the renderer is vanilla `@ts-check` JS, no framework. Smoke test:
   "minimize unnecessary interruptions". Don't add side effects to it.
 - Workers never act outward. Outward actions (send email, PR comment, commit) are
   written to `action_queue` as `pending` and only executed via `/guai-confirm`.
+- Workers receive least-privilege capabilities in a task envelope. Sidecar output is
+  untrusted until its result contract is validated and Guai gates it.
 - Secrets come from **env vars** (e.g. `GITHUB_TOKEN`) or optional gitignored
   `state/secrets.json` — never committed, never in `config/`.
 

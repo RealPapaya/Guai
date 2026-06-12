@@ -7,7 +7,7 @@ const mem = () => openMemory(':memory:');
 
 test('schema migrates and meta is readable', () => {
   const m = mem();
-  assert.equal(m.getMeta('schema_version'), '1');
+  assert.equal(m.getMeta('schema_version'), '2');
   m.setMeta('hello', 'world');
   assert.equal(m.getMeta('hello'), 'world');
   m.close();
