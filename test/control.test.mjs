@@ -6,7 +6,7 @@ import { openMemory } from '../core/memory.js';
 import { runSweep } from '../core/sweep.js';
 import {
   loadConfig, validateConfig, monitorEnabled, MONITOR_DOMAINS,
-  UI_LANGUAGES, SECRET_NAMES, secretStatus, setFileSecret,
+  UI_LANGUAGES, SECRET_NAMES, secretStatus, setFileSecret, JOB_WORKFLOW_TYPES,
 } from '../core/config.js';
 
 const base = loadConfig();
@@ -56,6 +56,20 @@ test('validateConfig accepts known usage presentation preferences', () => {
   } } }).ok, true);
   assert.equal(validateConfig({ ...base, ui: { ...base.ui, usage: { chartType: 'pie' } } }).ok, false);
   assert.equal(validateConfig({ ...base, ui: { ...base.ui, usage: { scope: 'year' } } }).ok, false);
+});
+
+test('validateConfig accepts fixed job workflows and rejects invalid required steps', () => {
+  const job = {
+    name: 'Release check',
+    workflow: [
+      { type: 'browse', method: 'docs', detail: 'Read release notes', required: true, enabled: true },
+      { type: 'notify', method: 'line', detail: 'Send summary', required: false, enabled: false },
+    ],
+  };
+  assert.equal(validateConfig({ ...base, jobs: [job] }).ok, true);
+  assert.equal(validateConfig({ ...base, jobs: [{ ...job, workflow: [{ type: 'shell' }] }] }).ok, false);
+  assert.equal(validateConfig({ ...base, jobs: [{ ...job, workflow: [{ type: 'verify', required: true, enabled: false }] }] }).ok, false);
+  assert.deepEqual(JOB_WORKFLOW_TYPES, ['browse', 'code', 'notify', 'verify', 'approval', 'report']);
 });
 
 // ---- secrets status (never exposes a raw value) -----------------------------

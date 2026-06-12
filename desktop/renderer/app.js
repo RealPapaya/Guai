@@ -54,6 +54,63 @@ const I18N = {
     'status.pendingApprovals': 'Pending approvals',
 
     'jobs.add': 'Add job',
+    'jobs.workspace': 'Workspace',
+    'jobs.title': 'Jobs',
+    'jobs.intro': 'Define recurring responsibilities and how Guai should handle them.',
+    'jobs.listTitle': 'All jobs',
+    'jobs.details': 'Job details',
+    'jobs.basic': 'Basic information',
+    'jobs.basicHint': 'Give this job a clear purpose and scope.',
+    'jobs.execution': 'Execution',
+    'jobs.executionHint': 'Choose how and when Guai should handle this job.',
+    'jobs.subtasksHint': 'Break the responsibility into trackable steps.',
+    'jobs.autoModel': 'Auto model',
+    'jobs.subtaskCount': '{count} subtasks',
+    'jobs.delete': 'Delete job',
+    'jobs.deleteConfirm': 'Delete "{name}"? This cannot be undone.',
+    'jobs.descriptionHint': 'This is the primary workspace brief the agent reads before starting. Include goals, context, constraints, and the expected result.',
+    'jobs.workflow': 'Required agent workflow',
+    'jobs.workflowHint': 'Define the fixed process the agent must follow before it can finish this job.',
+    'jobs.workflowGuarantee': 'Required steps are saved as the job execution contract and cannot be disabled.',
+    'jobs.workflowAdd': 'Add workflow step',
+    'jobs.workflowEmpty': 'No fixed workflow yet. Add the steps the agent must follow.',
+    'jobs.workflowRequired': 'Required',
+    'jobs.workflowOptional': 'Optional',
+    'jobs.workflowEnabled': 'Enabled',
+    'jobs.workflowMethod': 'Execution method',
+    'jobs.workflowDetail': 'Instructions for this step',
+    'jobs.workflowCount': '{count} required steps',
+    'jobs.workflow.browse': 'Web browsing',
+    'jobs.workflow.browseDesc': 'Research current sources and capture evidence.',
+    'jobs.workflow.code': 'Code',
+    'jobs.workflow.codeDesc': 'Inspect, edit, and validate code in the workspace.',
+    'jobs.workflow.notify': 'Notification',
+    'jobs.workflow.notifyDesc': 'Send results through the specified channel.',
+    'jobs.workflow.verify': 'Verification',
+    'jobs.workflow.verifyDesc': 'Run checks and confirm the expected outcome.',
+    'jobs.workflow.approval': 'Approval gate',
+    'jobs.workflow.approvalDesc': 'Pause for approval before sensitive actions.',
+    'jobs.workflow.report': 'Final report',
+    'jobs.workflow.reportDesc': 'Summarize work, evidence, and remaining risks.',
+    'jobs.method.browse.web': 'Browse the live web',
+    'jobs.method.browse.docs': 'Official docs only',
+    'jobs.method.browse.sources': 'Cross-check sources',
+    'jobs.method.code.edit': 'Implement changes',
+    'jobs.method.code.review': 'Review code',
+    'jobs.method.code.analyze': 'Analyze only',
+    'jobs.method.notify.desktop': 'Desktop notification',
+    'jobs.method.notify.line': 'LINE',
+    'jobs.method.notify.email': 'Email',
+    'jobs.method.notify.chat': 'Chat message',
+    'jobs.method.verify.tests': 'Run automated tests',
+    'jobs.method.verify.review': 'Manual review',
+    'jobs.method.verify.evidence': 'Collect evidence',
+    'jobs.method.approval.sensitive': 'Before sensitive actions',
+    'jobs.method.approval.external': 'Before external actions',
+    'jobs.method.approval.always': 'Always require approval',
+    'jobs.method.report.brief': 'Brief summary',
+    'jobs.method.report.detailed': 'Detailed report',
+    'jobs.method.report.artifact': 'Save report artifact',
     'jobs.name': 'Name',
     'jobs.description': 'Description',
     'jobs.model': 'Model',
@@ -254,6 +311,63 @@ const I18N = {
     'status.pendingApprovals': '待核准',
 
     'jobs.add': '新增工作',
+    'jobs.workspace': '工作區',
+    'jobs.title': '工作',
+    'jobs.intro': '定義持續性職責，以及 Guai 應如何處理這些工作。',
+    'jobs.listTitle': '全部工作',
+    'jobs.details': '工作詳細設定',
+    'jobs.basic': '基本資料',
+    'jobs.basicHint': '清楚定義這項工作的目的與範圍。',
+    'jobs.execution': '執行設定',
+    'jobs.executionHint': '選擇 Guai 處理這項工作的方式與時機。',
+    'jobs.subtasksHint': '將職責拆分成可追蹤的步驟。',
+    'jobs.autoModel': '自動選擇模型',
+    'jobs.subtaskCount': '{count} 個子任務',
+    'jobs.delete': '刪除工作',
+    'jobs.deleteConfirm': '確定刪除「{name}」？此操作無法復原。',
+    'jobs.descriptionHint': '這是 Agent 開始前會先閱讀的主要工作區說明。請放入目標、背景、限制與預期成果。',
+    'jobs.workflow': 'Agent 固定流程',
+    'jobs.workflowHint': '定義 Agent 完成此工作前必須遵循的固定流程。',
+    'jobs.workflowGuarantee': '必做步驟會儲存為工作執行契約，且無法被停用。',
+    'jobs.workflowAdd': '新增流程步驟',
+    'jobs.workflowEmpty': '尚未設定固定流程。請加入 Agent 必須遵循的步驟。',
+    'jobs.workflowRequired': '必做',
+    'jobs.workflowOptional': '選做',
+    'jobs.workflowEnabled': '啟用',
+    'jobs.workflowMethod': '執行方式',
+    'jobs.workflowDetail': '此步驟的執行指示',
+    'jobs.workflowCount': '{count} 個必做步驟',
+    'jobs.workflow.browse': '網頁瀏覽',
+    'jobs.workflow.browseDesc': '研究最新來源並保留證據。',
+    'jobs.workflow.code': '程式碼',
+    'jobs.workflow.codeDesc': '檢查、修改並驗證工作區程式碼。',
+    'jobs.workflow.notify': '通知',
+    'jobs.workflow.notifyDesc': '透過指定管道傳送結果。',
+    'jobs.workflow.verify': '驗證',
+    'jobs.workflow.verifyDesc': '執行檢查並確認預期成果。',
+    'jobs.workflow.approval': '核准關卡',
+    'jobs.workflow.approvalDesc': '敏感操作前暫停並等待核准。',
+    'jobs.workflow.report': '最終報告',
+    'jobs.workflow.reportDesc': '彙整工作、證據與剩餘風險。',
+    'jobs.method.browse.web': '瀏覽即時網頁',
+    'jobs.method.browse.docs': '僅使用官方文件',
+    'jobs.method.browse.sources': '交叉比對來源',
+    'jobs.method.code.edit': '實作程式碼修改',
+    'jobs.method.code.review': '審查程式碼',
+    'jobs.method.code.analyze': '僅分析程式碼',
+    'jobs.method.notify.desktop': '桌面通知',
+    'jobs.method.notify.line': 'LINE',
+    'jobs.method.notify.email': 'Email',
+    'jobs.method.notify.chat': '聊天訊息',
+    'jobs.method.verify.tests': '執行自動化測試',
+    'jobs.method.verify.review': '人工檢查',
+    'jobs.method.verify.evidence': '蒐集驗證證據',
+    'jobs.method.approval.sensitive': '敏感操作前',
+    'jobs.method.approval.external': '對外操作前',
+    'jobs.method.approval.always': '一律要求核准',
+    'jobs.method.report.brief': '簡短摘要',
+    'jobs.method.report.detailed': '詳細報告',
+    'jobs.method.report.artifact': '儲存報告檔案',
     'jobs.name': '名稱',
     'jobs.description': '說明',
     'jobs.model': '模型',
@@ -1275,6 +1389,29 @@ $$('.qa').forEach((b) => b.addEventListener('click', () => sendMessage(/** @type
 const JOB_MODEL_TIERS = ['opus', 'sonnet', 'haiku'];
 const JOB_MODES = ['active', 'passive', 'scheduled'];
 const JOB_MODE_CHIP = { active: 'a-push', passive: 'a-store', scheduled: 'a-digest' };
+const JOB_WORKFLOW_TYPES = ['browse', 'code', 'notify', 'verify', 'approval', 'report'];
+const JOB_WORKFLOW_ICONS = {
+  browse: 'ic-globe', code: 'ic-code', notify: 'ic-bell',
+  verify: 'ic-check', approval: 'ic-shield', report: 'ic-report',
+};
+const JOB_WORKFLOW_METHODS = {
+  browse: ['web', 'docs', 'sources'],
+  code: ['edit', 'review', 'analyze'],
+  notify: ['desktop', 'line', 'email', 'chat'],
+  verify: ['tests', 'review', 'evidence'],
+  approval: ['sensitive', 'external', 'always'],
+  report: ['brief', 'detailed', 'artifact'],
+};
+const DEFAULT_JOB_WORKFLOW = ['browse', 'code', 'verify', 'notify'];
+const makeWorkflowStep = (type) => ({
+  id: 'step-' + Date.now() + '-' + Math.random().toString(16).slice(2),
+  type,
+  method: JOB_WORKFLOW_METHODS[type][0],
+  label: '',
+  detail: '',
+  required: true,
+  enabled: true,
+});
 /** @type {any[]|null} */ let jobsState = null;
 let selectedJobIdx = -1;
 
@@ -1289,17 +1426,23 @@ async function loadJobs() {
 function renderJobList() {
   const wrap = $('#job-list');
   if (!jobsState) return;
+  $('#jobs-count').textContent = String(jobsState.length);
   wrap.replaceChildren(...jobsState.map((j, i) => el('div', {
     class: 'job-list-item' + (i === selectedJobIdx ? ' active' : ''),
     onclick: () => { selectedJobIdx = i; renderJobList(); renderJobEditor(); },
-  }, el('div', { class: 'name', text: j.name || t('jobs.newName') }),
-    chip(t('jobs.badge.' + j.mode), JOB_MODE_CHIP[j.mode] || 'a-store'))));
+  }, el('div', { class: 'job-list-main' },
+    el('div', { class: 'name', text: j.name || t('jobs.newName') }),
+    el('div', { class: 'job-list-meta' },
+      el('span', { text: j.model || t('jobs.autoModel') }),
+      el('span', { text: t('jobs.subtaskCount', { count: (j.subtasks || []).length }) }),
+      el('span', { text: t('jobs.workflowCount', { count: (j.workflow || []).filter((step) => step.required !== false).length }) }))),
+  chip(t('jobs.badge.' + j.mode), JOB_MODE_CHIP[j.mode] || 'a-store'))));
 }
 
 async function persistJobs() {
   const msg = $('#jobs-msg');
-  try { await call(api.saveJobs(jobsState)); flash(msg, t('jobs.saved'), false); }
-  catch (e) { flash(msg, t('jobs.failed', { msg: e.message }), true); }
+  try { await call(api.saveJobs(jobsState)); flash(msg, t('jobs.saved'), false); return true; }
+  catch (e) { flash(msg, t('jobs.failed', { msg: e.message }), true); return false; }
 }
 
 function renderJobEditor() {
@@ -1309,12 +1452,19 @@ function renderJobEditor() {
     return;
   }
   const j = jobsState[selectedJobIdx];
+  let editorTitle;
+  let subtaskCountLabel;
+  let workflowCountLabel;
 
   const nameInput = el('input', { type: 'text' });
   /** @type {HTMLInputElement} */ (nameInput).value = j.name || '';
-  nameInput.addEventListener('input', () => { j.name = /** @type {HTMLInputElement} */ (nameInput).value; renderJobList(); });
+  nameInput.addEventListener('input', () => {
+    j.name = /** @type {HTMLInputElement} */ (nameInput).value;
+    editorTitle.textContent = j.name || t('jobs.newName');
+    renderJobList();
+  });
 
-  const descInput = el('textarea', {});
+  const descInput = el('textarea', { class: 'workspace-description', rows: '9', placeholder: t('jobs.descriptionHint') });
   /** @type {HTMLTextAreaElement} */ (descInput).value = j.description || '';
   descInput.addEventListener('input', () => { j.description = /** @type {HTMLTextAreaElement} */ (descInput).value; });
 
@@ -1341,7 +1491,11 @@ function renderJobEditor() {
   /** @type {HTMLInputElement} */ (cronInput).value = j.cron || '';
   cronInput.addEventListener('input', () => { j.cron = /** @type {HTMLInputElement} */ (cronInput).value || null; });
 
-  const subWrap = el('div', {});
+  const subWrap = el('div', { class: 'subtask-list' });
+  const refreshSubtaskSummary = () => {
+    if (subtaskCountLabel) subtaskCountLabel.textContent = t('jobs.subtaskCount', { count: (j.subtasks || []).length });
+    renderJobList();
+  };
   const renderSubs = () => {
     subWrap.replaceChildren(...(j.subtasks || []).map((s, k) => {
       const cb = el('input', { type: 'checkbox' });
@@ -1350,28 +1504,147 @@ function renderJobEditor() {
       const txt = el('input', { type: 'text' });
       /** @type {HTMLInputElement} */ (txt).value = s.text || '';
       txt.addEventListener('input', () => { s.text = /** @type {HTMLInputElement} */ (txt).value; });
-      const rm = el('button', { class: 'remove', onclick: () => { j.subtasks.splice(k, 1); renderSubs(); } }, icon('ic-x'));
+      const rm = el('button', { class: 'remove', onclick: () => { j.subtasks.splice(k, 1); renderSubs(); refreshSubtaskSummary(); } }, icon('ic-x'));
       return el('div', { class: 'subtask-row' }, cb, txt, rm);
     }));
   };
   renderSubs();
-  const addSub = el('button', { class: 'ghost icon-btn', onclick: () => { (j.subtasks ||= []).push({ text: '', done: false }); renderSubs(); } },
+  const addSub = el('button', { class: 'ghost icon-btn', onclick: () => { (j.subtasks ||= []).push({ text: '', done: false }); renderSubs(); refreshSubtaskSummary(); } },
     icon('ic-add'), el('span', { text: t('jobs.addSubtask') }));
 
-  const form = el('div', { class: 'form' },
-    el('label', { text: t('jobs.name') }), nameInput,
-    el('label', { text: t('jobs.description') }), descInput,
-    el('label', { text: t('jobs.model') }), el('div', { class: 'row' }, modelSelect, autoToggle, el('span', { class: 'muted', text: t('jobs.modelAuto') })),
-    el('label', { text: t('jobs.mode') }), seg,
-    ...(j.mode === 'scheduled' ? [el('label', { text: t('jobs.cron') }), cronInput] : []),
-    el('label', { text: t('jobs.subtasks') }), el('div', {}, subWrap, addSub));
+  const sectionHead = (title, hint) => el('div', { class: 'job-section-head' },
+    el('div', { class: 'job-section-title', text: title }),
+    el('div', { class: 'job-section-hint', text: hint }));
+  const field = (label, control, cls = '') => el('div', { class: 'job-field ' + cls },
+    el('label', { text: label }), control);
 
-  wrap.replaceChildren(form, el('div', { class: 'row' }, el('button', { class: 'primary', onclick: persistJobs }, t('jobs.save'))));
+  const basic = el('section', { class: 'job-section' },
+    sectionHead(t('jobs.basic'), t('jobs.basicHint')),
+    el('div', { class: 'job-field-grid' },
+      field(t('jobs.name'), nameInput),
+      field(t('jobs.description'), descInput, 'job-field-wide')));
+  const execution = el('section', { class: 'job-section' },
+    sectionHead(t('jobs.execution'), t('jobs.executionHint')),
+    el('div', { class: 'job-field-grid job-execution-grid' },
+      field(t('jobs.model'), el('div', { class: 'job-model-control' }, modelSelect, autoToggle, el('span', { class: 'muted', text: t('jobs.modelAuto') }))),
+      field(t('jobs.mode'), seg),
+      ...(j.mode === 'scheduled' ? [field(t('jobs.cron'), cronInput, 'job-field-wide')] : [])));
+  const subtasks = el('section', { class: 'job-section' },
+    sectionHead(t('jobs.subtasks'), t('jobs.subtasksHint')),
+    subWrap, addSub);
+
+  const workflowWrap = el('div', { class: 'workflow-list' });
+  const refreshWorkflowSummary = () => {
+    const count = (j.workflow || []).filter((step) => step.required !== false).length;
+    if (workflowCountLabel) workflowCountLabel.textContent = t('jobs.workflowCount', { count });
+    renderJobList();
+  };
+  const renderWorkflow = () => {
+    const steps = j.workflow || [];
+    if (!steps.length) {
+      workflowWrap.replaceChildren(el('div', { class: 'workflow-empty' }, icon('ic-flow'), el('span', { text: t('jobs.workflowEmpty') })));
+      return;
+    }
+    workflowWrap.replaceChildren(...steps.map((step, k) => {
+      const type = JOB_WORKFLOW_TYPES.includes(step.type) ? step.type : 'verify';
+      step.type = type;
+      if (!JOB_WORKFLOW_METHODS[type].includes(step.method)) step.method = JOB_WORKFLOW_METHODS[type][0];
+      if (typeof step.required !== 'boolean') step.required = true;
+      if (typeof step.enabled !== 'boolean') step.enabled = true;
+      const required = step.required !== false;
+      const enabled = step.enabled !== false;
+      const requiredInput = el('input', { type: 'checkbox' });
+      /** @type {HTMLInputElement} */ (requiredInput).checked = required;
+      requiredInput.addEventListener('change', () => {
+        step.required = /** @type {HTMLInputElement} */ (requiredInput).checked;
+        if (step.required) step.enabled = true;
+        renderWorkflow(); refreshWorkflowSummary();
+      });
+      const enabledInput = el('input', { type: 'checkbox' });
+      /** @type {HTMLInputElement} */ (enabledInput).checked = enabled;
+      /** @type {HTMLInputElement} */ (enabledInput).disabled = required;
+      enabledInput.addEventListener('change', () => {
+        step.enabled = /** @type {HTMLInputElement} */ (enabledInput).checked;
+        renderWorkflow();
+      });
+      const detail = el('textarea', {
+        rows: '2',
+        placeholder: t('jobs.workflow.' + type + 'Desc'),
+        'aria-label': t('jobs.workflowDetail'),
+      });
+      /** @type {HTMLTextAreaElement} */ (detail).value = step.detail || '';
+      detail.addEventListener('input', () => { step.detail = /** @type {HTMLTextAreaElement} */ (detail).value; });
+      const method = el('select', { class: 'workflow-method', 'aria-label': t('jobs.workflowMethod') },
+        ...JOB_WORKFLOW_METHODS[type].map((value) => el('option', { value, text: t(`jobs.method.${type}.${value}`) })));
+      /** @type {HTMLSelectElement} */ (method).value = JOB_WORKFLOW_METHODS[type].includes(step.method) ? step.method : JOB_WORKFLOW_METHODS[type][0];
+      method.addEventListener('change', () => { step.method = /** @type {HTMLSelectElement} */ (method).value; });
+      const remove = el('button', {
+        class: 'workflow-remove',
+        title: t('jobs.delete'),
+        onclick: () => { j.workflow.splice(k, 1); renderWorkflow(); refreshWorkflowSummary(); },
+      }, icon('ic-trash'));
+      return el('article', { class: 'workflow-step' + (enabled ? '' : ' disabled') },
+        el('div', { class: 'workflow-step-icon' }, icon(JOB_WORKFLOW_ICONS[type])),
+        el('div', { class: 'workflow-step-main' },
+          el('div', { class: 'workflow-step-title' },
+            el('strong', { text: step.label || t('jobs.workflow.' + type) }),
+            el('span', { class: required ? 'workflow-required' : 'workflow-optional', text: required ? t('jobs.workflowRequired') : t('jobs.workflowOptional') })),
+          el('div', { class: 'workflow-step-desc', text: t('jobs.workflow.' + type + 'Desc') }),
+          method,
+          detail),
+        el('div', { class: 'workflow-step-controls' },
+          el('label', { class: 'workflow-check' }, requiredInput, el('span', { text: t('jobs.workflowRequired') })),
+          el('label', { class: 'workflow-check' }, enabledInput, el('span', { text: t('jobs.workflowEnabled') })),
+          remove));
+    }));
+  };
+  renderWorkflow();
+  const workflowPalette = el('div', { class: 'workflow-palette' },
+    ...JOB_WORKFLOW_TYPES.map((type) => el('button', {
+      class: 'workflow-add',
+      onclick: () => { (j.workflow ||= []).push(makeWorkflowStep(type)); renderWorkflow(); refreshWorkflowSummary(); },
+    }, icon(JOB_WORKFLOW_ICONS[type]), el('span', { text: t('jobs.workflow.' + type) }))));
+  const workflow = el('section', { class: 'job-section workflow-section' },
+    sectionHead(t('jobs.workflow'), t('jobs.workflowHint')),
+    el('div', { class: 'workflow-guarantee' }, icon('ic-shield'), el('span', { text: t('jobs.workflowGuarantee') })),
+    workflowWrap,
+    el('div', { class: 'workflow-add-head', text: t('jobs.workflowAdd') }),
+    workflowPalette);
+  editorTitle = el('div', { class: 'job-editor-title', text: j.name || t('jobs.newName') });
+  const deleteJob = async () => {
+    if (!window.confirm(t('jobs.deleteConfirm', { name: j.name || t('jobs.newName') }))) return;
+    jobsState.splice(selectedJobIdx, 1);
+    selectedJobIdx = Math.min(selectedJobIdx, jobsState.length - 1);
+    renderJobList(); renderJobEditor();
+    await persistJobs();
+  };
+  const editorHead = el('div', { class: 'job-editor-head' },
+    el('div', {}, el('div', { class: 'page-kicker', text: t('jobs.details') }),
+      editorTitle),
+    el('div', { class: 'job-editor-head-actions' },
+      chip(t('jobs.badge.' + j.mode), JOB_MODE_CHIP[j.mode] || 'a-store'),
+      el('button', { class: 'danger icon-btn', onclick: deleteJob }, icon('ic-trash'), el('span', { text: t('jobs.delete') }))));
+  subtaskCountLabel = el('span', { class: 'muted', text: t('jobs.subtaskCount', { count: (j.subtasks || []).length }) });
+  workflowCountLabel = el('span', { class: 'muted', text: t('jobs.workflowCount', { count: (j.workflow || []).filter((step) => step.required !== false).length }) });
+  const editorActions = el('div', { class: 'job-editor-actions' },
+    el('div', { class: 'job-editor-summary' }, subtaskCountLabel, workflowCountLabel),
+    el('button', { class: 'primary', onclick: persistJobs }, t('jobs.save')));
+
+  wrap.replaceChildren(editorHead, basic, workflow, execution, subtasks, editorActions);
 }
 
 $('#job-add').addEventListener('click', () => {
   if (!jobsState) jobsState = [];
-  jobsState.push({ id: 'job-' + Date.now(), name: t('jobs.newName'), description: '', model: null, mode: 'active', cron: null, subtasks: [] });
+  jobsState.push({
+    id: 'job-' + Date.now(),
+    name: t('jobs.newName'),
+    description: '',
+    model: null,
+    mode: 'active',
+    cron: null,
+    subtasks: [],
+    workflow: DEFAULT_JOB_WORKFLOW.map(makeWorkflowStep),
+  });
   selectedJobIdx = jobsState.length - 1;
   renderJobList(); renderJobEditor();
 });

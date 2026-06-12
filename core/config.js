@@ -44,6 +44,8 @@ export const SECRET_NAMES = ['GITHUB_TOKEN', 'LINE_TOKEN', 'ANTHROPIC_API_KEY', 
 export const JOB_MODELS = ['opus', 'sonnet', 'haiku'];
 /** How a Job runs: active (on demand), passive (triggered by findings), scheduled (cron). */
 export const JOB_MODES = ['active', 'passive', 'scheduled'];
+/** Fixed workflow step types a Job can require its agent to complete. */
+export const JOB_WORKFLOW_TYPES = ['browse', 'code', 'notify', 'verify', 'approval', 'report'];
 
 /** A disabled flag must be EXPLICITLY false — absent/unknown defaults to enabled,
  *  so an older config (no `monitors` block) keeps monitoring everything. */
@@ -179,6 +181,20 @@ export function validateConfig(cfg) {
         else j.subtasks.forEach((s, k) => {
           if (!isObj(s) || typeof s.text !== 'string') errors.push(`jobs[${i}].subtasks[${k}].text must be a string`);
           else if (s.done !== undefined && typeof s.done !== 'boolean') errors.push(`jobs[${i}].subtasks[${k}].done must be a boolean`);
+        });
+      }
+      if (j.workflow !== undefined) {
+        if (!Array.isArray(j.workflow)) errors.push(`jobs[${i}].workflow must be an array`);
+        else j.workflow.forEach((step, k) => {
+          const path = `jobs[${i}].workflow[${k}]`;
+          if (!isObj(step)) { errors.push(`${path} must be an object`); return; }
+          if (!JOB_WORKFLOW_TYPES.includes(step.type)) errors.push(`${path}.type must be one of ${JOB_WORKFLOW_TYPES.join('|')}`);
+          if (step.label !== undefined && typeof step.label !== 'string') errors.push(`${path}.label must be a string`);
+          if (step.method !== undefined && typeof step.method !== 'string') errors.push(`${path}.method must be a string`);
+          if (step.detail !== undefined && typeof step.detail !== 'string') errors.push(`${path}.detail must be a string`);
+          if (step.required !== undefined && typeof step.required !== 'boolean') errors.push(`${path}.required must be a boolean`);
+          if (step.enabled !== undefined && typeof step.enabled !== 'boolean') errors.push(`${path}.enabled must be a boolean`);
+          if (step.required === true && step.enabled === false) errors.push(`${path} cannot be required and disabled`);
         });
       }
     });
