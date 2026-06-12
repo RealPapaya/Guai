@@ -186,6 +186,7 @@ const I18N = {
     'usage.sync': 'Sync now',
     'usage.syncing': 'Syncing local CLI usage...',
     'usage.done': 'Usage synchronized.',
+    'usage.mini': 'Desktop card',
     'usage.allProviders': 'All providers',
     'usage.allProjects': 'All projects',
     'usage.days7': 'Last 7 days',
@@ -371,6 +372,7 @@ const I18N = {
     'usage.sync': '立即同步',
     'usage.syncing': '正在同步本機 CLI 用量...',
     'usage.done': '用量同步完成。',
+    'usage.mini': '桌面小卡',
     'usage.allProviders': '所有供應商',
     'usage.allProjects': '所有專案',
     'usage.days7': '最近 7 天',
@@ -1027,6 +1029,10 @@ $$('#usage-linekind button').forEach((b) => b.addEventListener('click', () => {
   renderUsageChart();
 }));
 $('#usage-chart-range').addEventListener('change', loadStatusUsage);
+$('#usage-chart-mini').addEventListener('click', async () => {
+  try { await call(api.showUsageMini()); }
+  catch (e) { flash($('#usage-chart-msg'), e.message, true); }
+});
 $('#usage-chart-sync').addEventListener('click', async () => {
   const btn = /** @type {HTMLButtonElement} */ ($('#usage-chart-sync')); const msg = $('#usage-chart-msg');
   btn.disabled = true; msg.className = 'muted'; msg.textContent = t('usage.syncing');

@@ -4,7 +4,7 @@
 // privileged op by spawning `node scripts/control.mjs <cmd>` (the bridge), and runs the
 // in-app daily scheduler while the app is open. The renderer stays fully sandboxed:
 // contextIsolation on, nodeIntegration off — it only sees window.guai from preload.
-const { app, BrowserWindow, ipcMain, Tray, Menu, Notification, shell, nativeImage } = require('electron');
+const { app, BrowserWindow, ipcMain, Tray, Menu, Notification, shell, nativeImage, screen } = require('electron');
 const { spawn, execFileSync } = require('node:child_process');
 const { join } = require('node:path');
 const { existsSync, writeFileSync } = require('node:fs');
@@ -44,6 +44,7 @@ const NODE = (() => {
 })();
 
 /** @type {BrowserWindow | null} */ let win = null;
+/** @type {BrowserWindow | null} */ let usageMiniWin = null;
 /** @type {Tray | null} */ let tray = null;
 /** @type {ReturnType<typeof setTimeout> | null} */ let dailyTimer = null;
 /** @type {ReturnType<typeof setInterval> | null} */ let sweepTimer = null;
@@ -118,6 +119,14 @@ handle('guai:dashboard:open', async () => {
 handle('guai:usage:sync', () => runControl(['usage-sync']));
 handle('guai:usage:summary', () => runControl(['usage-summary']));
 handle('guai:usage:charts', (opts = {}) => runControl(['usage-charts', ...(opts.days ? [`--days=${opts.days}`] : [])]));
+handle('guai:usage:mini:show', () => {
+  showUsageMini();
+  return { visible: true };
+});
+handle('guai:usage:mini:hide', () => {
+  usageMiniWin?.hide();
+  return { visible: false };
+});
 handle('guai:usage:sessions', (filters = {}) => {
   const args = ['usage-sessions'];
   if (filters.provider) args.push(`--provider=${filters.provider}`);
@@ -165,7 +174,7 @@ async function runJob(kind) {
     if (hot.length && Notification.isSupported()) {
       new Notification({ title: 'Guai', body: String(hot[0].title).slice(0, 200) }).show();
     }
-    if (win && !win.isDestroyed()) win.webContents.send('guai:refreshed');
+    notifyRefreshed();
   } catch (e) {
     console.error(`scheduled ${kind} failed:`, /** @type {Error} */ (e).message);
   }
@@ -199,7 +208,7 @@ async function applySchedule() {
   }
   if (myGen !== scheduleGen) return;
   runJob('usage-sync');
-  usageTimer = setInterval(() => runJob('usage-sync'), 60_000);
+  usageTimer = setInterval(() => runJob('usage-sync'), 20_000);
   if (myGen === scheduleGen) refreshTray();
 }
 
@@ -237,7 +246,7 @@ function refreshTray() {
           const { schedule } = await runControl(['schedule-get']);
           await runControl(['schedule-set'], JSON.stringify({ ...schedule, enabled: !schedule?.enabled }));
           await applySchedule();
-          if (win && !win.isDestroyed()) win.webContents.send('guai:refreshed');
+          notifyRefreshed();
         } catch (e) { console.error('tray activate failed:', /** @type {Error} */ (e).message); }
       },
     },
@@ -249,6 +258,52 @@ function refreshTray() {
 function showWindow() {
   if (win && !win.isDestroyed()) { win.show(); win.focus(); return; }
   createWindow();
+}
+
+function notifyRefreshed() {
+  for (const window of BrowserWindow.getAllWindows()) {
+    if (!window.isDestroyed()) window.webContents.send('guai:refreshed');
+  }
+}
+
+function positionUsageMini() {
+  if (!usageMiniWin || usageMiniWin.isDestroyed()) return;
+  const { x, y, width, height } = screen.getPrimaryDisplay().workArea;
+  const [cardWidth, cardHeight] = usageMiniWin.getSize();
+  usageMiniWin.setPosition(x + width - cardWidth - 16, y + height - cardHeight - 16);
+}
+
+function showUsageMini() {
+  if (usageMiniWin && !usageMiniWin.isDestroyed()) {
+    positionUsageMini();
+    usageMiniWin.showInactive();
+    return;
+  }
+  usageMiniWin = new BrowserWindow({
+    width: 340, height: 270,
+    frame: false,
+    resizable: false,
+    maximizable: false,
+    minimizable: false,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    show: false,
+    title: 'Guai Usage',
+    backgroundColor: '#11151c',
+    icon: existsSync(ICON) ? ICON : undefined,
+    webPreferences: {
+      preload: join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+  usageMiniWin.loadFile(join(__dirname, 'renderer', 'usage-mini.html'));
+  usageMiniWin.once('ready-to-show', () => {
+    positionUsageMini();
+    usageMiniWin?.showInactive();
+  });
+  usageMiniWin.on('closed', () => { usageMiniWin = null; });
 }
 
 function createWindow() {
