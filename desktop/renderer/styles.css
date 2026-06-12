@@ -40,11 +40,15 @@ button.primary:hover { background: #c02c60; }
 button.ghost { background: #1a1e25; color: #cfd6df; }
 button.ghost:hover { background: #222732; }
 button:disabled { opacity: .5; cursor: default; }
+.link-button { padding: 0; border: 0; background: none; color: #6b9bd1; text-align: left; }
+.link-button:hover { color: #9bc2ef; text-decoration: underline; }
 
 .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
 .card { background: #171a21; border: 1px solid #262b33; border-radius: 10px; padding: 12px 14px; }
 .card .big { font-size: 26px; font-weight: 600; }
+.card .big.provider-name { text-transform: capitalize; font-size: 20px; }
 .card .label { color: #8b95a3; font-size: 12px; }
+.card .meta { color: #8b95a3; font-size: 11px; margin-top: 4px; }
 
 table { width: 100%; border-collapse: collapse; }
 td, th { padding: 6px 8px; border-bottom: 1px solid #20242c; text-align: left; vertical-align: top; }

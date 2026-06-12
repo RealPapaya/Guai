@@ -108,6 +108,87 @@ CREATE TABLE IF NOT EXISTS cost_baselines (
   UNIQUE(metric, window_days)
 );
 
+-- SUBSCRIPTION USAGE: local Claude Code / Codex CLI sessions and account quotas.
+-- Credentials are never stored here; account_ref is a non-secret local identifier.
+CREATE TABLE IF NOT EXISTS usage_accounts (
+  provider        TEXT PRIMARY KEY,       -- claude | codex
+  account_ref     TEXT,
+  plan_type       TEXT,
+  login_source    TEXT NOT NULL DEFAULT 'cli',
+  status          TEXT NOT NULL DEFAULT 'unknown',
+  last_sync_at    INTEGER,
+  error           TEXT
+);
+
+CREATE TABLE IF NOT EXISTS project_roots (
+  root_path       TEXT PRIMARY KEY,
+  project_id      INTEGER NOT NULL REFERENCES projects(id),
+  provider        TEXT,
+  created_at      INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_project_roots_project ON project_roots(project_id);
+
+CREATE TABLE IF NOT EXISTS usage_sessions (
+  provider        TEXT NOT NULL,
+  session_id      TEXT NOT NULL,
+  project_id      INTEGER REFERENCES projects(id),
+  cwd             TEXT,
+  title           TEXT,
+  model           TEXT,
+  started_at      INTEGER,
+  updated_at      INTEGER,
+  input_tokens    INTEGER NOT NULL DEFAULT 0,
+  cached_tokens   INTEGER NOT NULL DEFAULT 0,
+  output_tokens   INTEGER NOT NULL DEFAULT 0,
+  reasoning_tokens INTEGER NOT NULL DEFAULT 0,
+  total_tokens    INTEGER NOT NULL DEFAULT 0,
+  raw_ref         TEXT,
+  PRIMARY KEY(provider, session_id)
+);
+CREATE INDEX IF NOT EXISTS idx_usage_sessions_project ON usage_sessions(project_id);
+CREATE INDEX IF NOT EXISTS idx_usage_sessions_updated ON usage_sessions(updated_at);
+
+CREATE TABLE IF NOT EXISTS usage_turns (
+  provider        TEXT NOT NULL,
+  session_id      TEXT NOT NULL,
+  turn_id         TEXT NOT NULL,
+  title           TEXT,
+  model           TEXT,
+  started_at      INTEGER,
+  updated_at      INTEGER,
+  input_tokens    INTEGER NOT NULL DEFAULT 0,
+  cached_tokens   INTEGER NOT NULL DEFAULT 0,
+  output_tokens   INTEGER NOT NULL DEFAULT 0,
+  reasoning_tokens INTEGER NOT NULL DEFAULT 0,
+  total_tokens    INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY(provider, session_id, turn_id),
+  FOREIGN KEY(provider, session_id) REFERENCES usage_sessions(provider, session_id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_usage_turns_session ON usage_turns(provider, session_id);
+
+CREATE TABLE IF NOT EXISTS quota_snapshots (
+  id              INTEGER PRIMARY KEY,
+  provider        TEXT NOT NULL,
+  window_name     TEXT NOT NULL,
+  used_percent    REAL,
+  window_minutes  INTEGER,
+  resets_at       INTEGER,
+  credits_json    TEXT,
+  captured_at     INTEGER NOT NULL,
+  UNIQUE(provider, window_name, captured_at)
+);
+CREATE INDEX IF NOT EXISTS idx_quota_provider_time ON quota_snapshots(provider, captured_at);
+
+CREATE TABLE IF NOT EXISTS usage_ingest_cursors (
+  provider        TEXT NOT NULL,
+  file_path       TEXT NOT NULL,
+  byte_offset     INTEGER NOT NULL DEFAULT 0,
+  file_size       INTEGER NOT NULL DEFAULT 0,
+  mtime_ms        INTEGER NOT NULL DEFAULT 0,
+  updated_at      INTEGER NOT NULL,
+  PRIMARY KEY(provider, file_path)
+);
+
 -- ACTION QUEUE: propose-and-confirm choke point for outward actions.
 CREATE TABLE IF NOT EXISTS action_queue (
   id                 INTEGER PRIMARY KEY,

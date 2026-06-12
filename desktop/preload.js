@@ -21,6 +21,10 @@ contextBridge.exposeInMainWorld('guai', {
   getSchedule: () => invoke('guai:schedule:get'),
   setSchedule: (schedule) => invoke('guai:schedule:set', schedule),
   openDashboard: () => invoke('guai:dashboard:open'),
+  syncUsage: () => invoke('guai:usage:sync'),
+  usageSummary: () => invoke('guai:usage:summary'),
+  usageSessions: (filters) => invoke('guai:usage:sessions', filters),
+  usageSession: (provider, id) => invoke('guai:usage:session', { provider, id }),
   // Fired by the main process after a scheduled/tray-triggered job completes.
   onRefreshed: (cb) => {
     const handler = () => cb();

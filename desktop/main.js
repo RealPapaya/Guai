@@ -47,6 +47,7 @@ const NODE = (() => {
 /** @type {Tray | null} */ let tray = null;
 /** @type {ReturnType<typeof setTimeout> | null} */ let dailyTimer = null;
 /** @type {ReturnType<typeof setInterval> | null} */ let sweepTimer = null;
+/** @type {ReturnType<typeof setInterval> | null} */ let usageTimer = null;
 let armed = false;
 let quitting = false;
 
@@ -114,6 +115,16 @@ handle('guai:dashboard:open', async () => {
   await shell.openPath(path);
   return { path };
 });
+handle('guai:usage:sync', () => runControl(['usage-sync']));
+handle('guai:usage:summary', () => runControl(['usage-summary']));
+handle('guai:usage:sessions', (filters = {}) => {
+  const args = ['usage-sessions'];
+  if (filters.provider) args.push(`--provider=${filters.provider}`);
+  if (filters.projectId) args.push(`--project-id=${filters.projectId}`);
+  if (filters.since) args.push(`--since=${filters.since}`);
+  return runControl(args);
+});
+handle('guai:usage:session', ({ provider, id }) => runControl(['usage-session', `--provider=${provider}`, `--id=${id}`]));
 
 // --- the in-app scheduler (fires while the app/tray is open) -------------------
 
@@ -130,7 +141,8 @@ function msUntil(hour, minute, weekdaysOnly) {
 function clearTimers() {
   if (dailyTimer) clearTimeout(dailyTimer);
   if (sweepTimer) clearInterval(sweepTimer);
-  dailyTimer = sweepTimer = null;
+  if (usageTimer) clearInterval(usageTimer);
+  dailyTimer = sweepTimer = usageTimer = null;
 }
 
 /** Run a deterministic job and notify on the top hot item. */
@@ -173,6 +185,9 @@ async function applySchedule() {
     if (myGen === scheduleGen) armed = false;
     console.error('applySchedule failed:', /** @type {Error} */ (e).message);
   }
+  if (myGen !== scheduleGen) return;
+  runJob('usage-sync');
+  usageTimer = setInterval(() => runJob('usage-sync'), 60_000);
   if (myGen === scheduleGen) refreshTray();
 }
 
@@ -249,6 +264,9 @@ function createWindow() {
     });
     win.webContents.on('did-finish-load', () => {
       console.log('SMOKE: renderer loaded ok');
+      if (process.env.GUAI_SMOKE_USAGE) {
+        setTimeout(() => win.webContents.executeJavaScript(`document.querySelector('[data-tab="usage"]').click()`), 300);
+      }
       setTimeout(async () => { // let the status IPC round-trip resolve and render first
         try {
           const img = await win.webContents.capturePage();

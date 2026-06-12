@@ -40,6 +40,7 @@ const I18N = {
     'tab.monitors': 'Monitors',
     'tab.config': 'Config',
     'tab.accounts': 'Accounts',
+    'tab.usage': 'Usage',
     'tab.actions': 'Actions',
     'tab.schedule': 'Schedule',
 
@@ -144,6 +145,27 @@ const I18N = {
     'schedule.durableInstalled': ' Durable task installed.',
     'schedule.durableFailed': ' Durable task NOT installed: {err}',
     'unknown': 'unknown',
+    'usage.sync': 'Sync now',
+    'usage.syncing': 'Syncing local CLI usage...',
+    'usage.done': 'Usage synchronized.',
+    'usage.allProviders': 'All providers',
+    'usage.allProjects': 'All projects',
+    'usage.days7': 'Last 7 days',
+    'usage.days30': 'Last 30 days',
+    'usage.allTime': 'All time',
+    'usage.projects': 'Projects',
+    'usage.sessions': 'Sessions',
+    'usage.none': 'No local Claude/Codex sessions found.',
+    'usage.localOnly': 'Local session attribution',
+    'usage.quota': '{provider} {window} quota',
+    'usage.resets': 'resets {time}',
+    'usage.tokens': 'tokens',
+    'usage.session': 'Session',
+    'usage.project': 'Project',
+    'usage.provider': 'Provider',
+    'usage.updated': 'Updated',
+    'usage.turns': 'Turns',
+    'usage.external': 'Web, mobile, and other-computer usage is reflected in account quota only and cannot be attributed locally.',
   },
   'zh-TW': {
     'brand.subtitle': '首席幕僚',
@@ -155,6 +177,7 @@ const I18N = {
     'tab.monitors': '監控',
     'tab.config': '設定',
     'tab.accounts': '帳號',
+    'tab.usage': '用量',
     'tab.actions': '行動',
     'tab.schedule': '排程',
 
@@ -259,6 +282,27 @@ const I18N = {
     'schedule.durableInstalled': ' 已安裝持久工作。',
     'schedule.durableFailed': ' 持久工作未安裝：{err}',
     'unknown': '未知',
+    'usage.sync': '立即同步',
+    'usage.syncing': '正在同步本機 CLI 用量...',
+    'usage.done': '用量同步完成。',
+    'usage.allProviders': '所有供應商',
+    'usage.allProjects': '所有專案',
+    'usage.days7': '最近 7 天',
+    'usage.days30': '最近 30 天',
+    'usage.allTime': '全部時間',
+    'usage.projects': '專案',
+    'usage.sessions': '工作階段',
+    'usage.none': '尚未找到本機 Claude/Codex 工作階段。',
+    'usage.localOnly': '本機工作階段歸因',
+    'usage.quota': '{provider} {window} 配額',
+    'usage.resets': '重置時間 {time}',
+    'usage.tokens': 'tokens',
+    'usage.session': '工作階段',
+    'usage.project': '專案',
+    'usage.provider': '供應商',
+    'usage.updated': '更新時間',
+    'usage.turns': '回合',
+    'usage.external': '網頁、手機及其他電腦的用量只會反映於帳戶配額，無法歸因至本機專案。',
   },
 };
 
@@ -316,7 +360,7 @@ function setPath(o, p, v) {
 
 // --- tabs ---------------------------------------------------------------------
 
-const LOADERS = { status: loadStatus, monitors: loadMonitors, config: loadConfigTab, accounts: loadAccounts, actions: loadActions, schedule: loadSchedule };
+const LOADERS = { status: loadStatus, monitors: loadMonitors, config: loadConfigTab, accounts: loadAccounts, usage: loadUsage, actions: loadActions, schedule: loadSchedule };
 function activate(name) {
   $$('.tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === name));
   $$('.panel').forEach((p) => p.classList.toggle('active', p.id === `tab-${name}`));
@@ -543,6 +587,93 @@ $('#identity-save').addEventListener('click', async () => {
   } catch (e) { flash(msg, e.message, true); }
 });
 
+// --- USAGE --------------------------------------------------------------------
+
+const fmtTokens = (n) => new Intl.NumberFormat(LANG, { notation: Number(n) >= 100000 ? 'compact' : 'standard', maximumFractionDigits: 1 }).format(Number(n) || 0);
+
+function usageQuotaCard(q) {
+  const used = q.used_percent == null ? '?' : `${Math.round(q.used_percent)}%`;
+  return el('div', { class: 'card' },
+    el('div', { class: 'big', text: used }),
+    el('div', { class: 'label', text: t('usage.quota', { provider: q.provider, window: q.window_name }) }),
+    el('div', { class: 'meta', text: q.resets_at ? t('usage.resets', { time: fmtTime(q.resets_at) }) : '' }));
+}
+
+function usageTotalCard(x) {
+  return el('div', { class: 'card' },
+    el('div', { class: 'big', text: fmtTokens(x.total_tokens) }),
+    el('div', { class: 'label', text: `${x.provider} ${t('usage.tokens')}` }),
+    el('div', { class: 'meta', text: `${x.sessions} ${t('usage.sessions')} / ${x.projects} ${t('usage.projects')}` }));
+}
+
+function usageAccountCard(a) {
+  return el('div', { class: 'card' },
+    el('div', { class: 'big provider-name', text: a.provider }),
+    el('div', { class: 'label', text: `${a.plan_type || '?'} / ${a.status}` }),
+    el('div', { class: 'meta', text: a.last_sync_at ? fmtTime(a.last_sync_at) : '' }));
+}
+
+async function showUsageSession(provider, id) {
+  const wrap = $('#usage-detail');
+  try {
+    const s = await call(api.usageSession(provider, id));
+    if (!s) return;
+    const rows = s.turns.map((x) => el('tr', {},
+      el('td', { text: x.title || x.turn_id }), el('td', { class: 'muted', text: x.model || '?' }),
+      el('td', { text: fmtTokens(x.input_tokens) }), el('td', { text: fmtTokens(x.cached_tokens) }),
+      el('td', { text: fmtTokens(x.output_tokens) }), el('td', { text: fmtTokens(x.reasoning_tokens) }),
+      el('td', { text: fmtTokens(x.total_tokens) })));
+    wrap.replaceChildren(el('h2', { text: `${t('usage.turns')}: ${s.title || s.session_id}` }),
+      el('table', {}, el('thead', {}, el('tr', {}, ...['Turn', 'Model', 'Input', 'Cache', 'Output', 'Reasoning', 'Total'].map((h) => el('th', { text: h })))),
+        el('tbody', {}, ...rows)));
+  } catch (e) { wrap.replaceChildren(el('div', { class: 'err', text: e.message })); }
+}
+
+async function loadUsage() {
+  const quota = $('#usage-quota'); const projects = $('#usage-projects'); const sessionsWrap = $('#usage-sessions');
+  try {
+    const summary = await call(api.usageSummary());
+    quota.replaceChildren(...summary.accounts.map(usageAccountCard), ...summary.quota.map(usageQuotaCard), ...summary.totals.map(usageTotalCard));
+    const projectSelect = /** @type {HTMLSelectElement} */ ($('#usage-project'));
+    const selected = projectSelect.value;
+    projectSelect.replaceChildren(el('option', { value: '', text: t('usage.allProjects') }),
+      ...summary.projects.map((p) => el('option', { value: p.id, text: p.name })));
+    projectSelect.value = selected;
+    const projectRows = summary.projects.map((p) => el('tr', {},
+      el('td', { text: p.name }), el('td', { text: String(p.sessions) }),
+      el('td', { text: fmtTokens(p.total_tokens) }), el('td', { class: 'muted', text: fmtTime(p.latest_at) })));
+    projects.replaceChildren(projectRows.length ? el('table', {},
+      el('thead', {}, el('tr', {}, ...[t('usage.project'), t('usage.sessions'), t('usage.tokens'), t('usage.updated')].map((h) => el('th', { text: h })))),
+      el('tbody', {}, ...projectRows)) : el('div', { class: 'empty', text: t('usage.none') }));
+
+    const provider = /** @type {HTMLSelectElement} */ ($('#usage-provider')).value;
+    const projectId = /** @type {HTMLSelectElement} */ ($('#usage-project')).value;
+    const days = /** @type {HTMLSelectElement} */ ($('#usage-range')).value;
+    const list = await call(api.usageSessions({ provider: provider || null, projectId: projectId ? Number(projectId) : null,
+      since: days ? Date.now() - Number(days) * 864e5 : null }));
+    const sessionRows = list.map((s) => el('tr', {},
+      el('td', {}, el('button', { class: 'link-button', onclick: () => showUsageSession(s.provider, s.session_id) }, s.title || s.session_id)),
+      el('td', {}, chip(s.provider, s.provider === 'claude' ? 'a-digest' : 'a-store')),
+      el('td', { text: s.project_name || '?' }), el('td', { class: 'muted', text: s.model || '?' }),
+      el('td', { text: fmtTokens(s.total_tokens) }), el('td', { class: 'muted', text: fmtTime(s.updated_at) })));
+    sessionsWrap.replaceChildren(sessionRows.length ? el('table', {},
+      el('thead', {}, el('tr', {}, ...[t('usage.session'), t('usage.provider'), t('usage.project'), 'Model', t('usage.tokens'), t('usage.updated')].map((h) => el('th', { text: h })))),
+      el('tbody', {}, ...sessionRows)) : el('div', { class: 'empty', text: t('usage.none') }));
+  } catch (e) {
+    quota.replaceChildren(el('div', { class: 'err', text: e.message }));
+    projects.replaceChildren(); sessionsWrap.replaceChildren();
+  }
+}
+
+$('#usage-sync').addEventListener('click', async () => {
+  const btn = /** @type {HTMLButtonElement} */ ($('#usage-sync')); const msg = $('#usage-msg');
+  btn.disabled = true; msg.textContent = t('usage.syncing');
+  try { await call(api.syncUsage()); flash(msg, t('usage.done'), false); await loadUsage(); }
+  catch (e) { flash(msg, e.message, true); }
+  finally { btn.disabled = false; }
+});
+for (const id of ['usage-provider', 'usage-project', 'usage-range']) $('#' + id).addEventListener('change', loadUsage);
+
 // --- ACTIONS ------------------------------------------------------------------
 
 async function loadActions() {
@@ -617,7 +748,11 @@ $('#schedule-save').addEventListener('click', async () => {
 // --- boot ---------------------------------------------------------------------
 
 $('#lang-select').addEventListener('change', (e) => setLang(/** @type {HTMLSelectElement} */ (e.target).value, true));
-api.onRefreshed(() => { if ($('.tab.active').dataset.tab === 'status') loadStatus(); });
+api.onRefreshed(() => {
+  const active = $('.tab.active').dataset.tab;
+  if (active === 'status') loadStatus();
+  if (active === 'usage') loadUsage();
+});
 
 (async function boot() {
   try {

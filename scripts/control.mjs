@@ -36,6 +36,7 @@ import { runSweep } from '../core/sweep.js';
 import { buildBriefModel, renderBrief } from '../core/render/brief.js';
 import { renderDashboard } from '../core/render/dashboard.js';
 import { SidecarClient } from '../core/sidecar.js';
+import { syncUsage } from '../core/usage.js';
 
 const TASK_NAME = 'Guai-DailyBrief';
 const DAILY_CMD = join(paths.root, 'state', 'guai-daily.cmd');
@@ -258,6 +259,20 @@ async function main() {
       case 'tasks': return ok(mem.agentTasks());
       case 'traces': return ok(mem.executionTraces());
       case 'catalog': return ok(mem.componentCatalog());
+      case 'usage-sync': return ok(await syncUsage(mem));
+      case 'usage-summary': return ok(mem.usageSummary());
+      case 'usage-sessions': return ok(mem.usageSessions({
+        provider: val('--provider'),
+        projectId: val('--project-id') ? Number(val('--project-id')) : null,
+        since: val('--since') ? Number(val('--since')) : null,
+        limit: val('--limit') ? Number(val('--limit')) : 200,
+      }));
+      case 'usage-session': {
+        const provider = val('--provider');
+        const id = val('--id');
+        if (!provider || !id) return fail('Usage: usage-session --provider=claude|codex --id=SESSION_ID');
+        return ok(mem.usageSession(provider, id));
+      }
       case 'sidecar-sync': {
         if (cfg.sidecar?.enabled === false) return fail('Worker sidecar is disabled in config.');
         const catalog = await new SidecarClient(cfg.sidecar).catalog();

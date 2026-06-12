@@ -20,6 +20,23 @@ node scripts/render-dashboard.mjs # state/dashboard.html — open in any browser
 node scripts/status.mjs           # current state at a glance
 ```
 
+## Claude / Codex subscription usage
+
+Guai can reuse the accounts already logged in through Claude Code and Codex CLI. It
+does not require API keys for this feature and never stores the CLI OAuth tokens in
+Guai's database.
+
+```bash
+node scripts/control.mjs usage-sync
+node scripts/control.mjs usage-summary
+node scripts/control.mjs usage-sessions --provider=codex
+```
+
+The desktop **Usage** tab shows subscription quota/reset windows plus token usage by
+project, session, and turn. While the desktop app is running in the tray it syncs once
+per minute. Web/mobile/other-computer usage is visible in account quota only and cannot
+be attributed to a local project.
+
 ## Worker execution sidecar
 
 Guai remains the source of truth and safety boundary. Workers receive a strict

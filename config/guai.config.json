@@ -17,9 +17,9 @@
   "schedule": {
     "enabled": true,
     "sweepEveryMinutes": 180,
-    "dailyBriefHour": 7,
+    "dailyBriefHour": 9,
     "dailyBriefMinute": 57,
-    "weekdaysOnly": true,
+    "weekdaysOnly": false,
     "durable": false
   },
   "sidecar": {
@@ -82,7 +82,7 @@
     }
   },
   "brief": {
-    "hour": 7,
+    "hour": 9,
     "minute": 57,
     "freshnessMinutes": 90,
     "weekdaysOnly": true

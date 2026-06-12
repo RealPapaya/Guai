@@ -72,6 +72,12 @@ export function openMemory(dbPath) {
       return q(`SELECT * FROM projects WHERE status='active' ORDER BY last_activity_at DESC`)
         .all().map((r) => parse(r, 'repos_json'));
     },
+    project(id) {
+      return parse(q('SELECT * FROM projects WHERE id=?').get(id), 'repos_json');
+    },
+    projectByName(name) {
+      return parse(q('SELECT * FROM projects WHERE name=?').get(name), 'repos_json');
+    },
     touchProject(id, ts = now()) {
       q('UPDATE projects SET last_activity_at=? WHERE id=?').run(ts, id);
     },
@@ -206,6 +212,115 @@ export function openMemory(dbPath) {
       const latest = parse(q('SELECT * FROM cost_usage ORDER BY period_start DESC LIMIT 1').get(), 'tokens_json');
       const base = q(`SELECT * FROM cost_baselines WHERE metric='daily_usd' ORDER BY window_days DESC LIMIT 1`).get();
       return { latest: latest ?? null, baselineUsd: base ? base.baseline_value : null };
+    },
+
+    // ---- subscription usage ---------------------------------------------
+    upsertUsageAccount({ provider, account_ref = null, plan_type = null, login_source = 'cli', status = 'unknown', error = null, last_sync_at = now() }) {
+      q(`INSERT INTO usage_accounts(provider,account_ref,plan_type,login_source,status,last_sync_at,error)
+         VALUES(?,?,?,?,?,?,?)
+         ON CONFLICT(provider) DO UPDATE SET account_ref=COALESCE(excluded.account_ref,usage_accounts.account_ref),
+           plan_type=COALESCE(excluded.plan_type,usage_accounts.plan_type),login_source=excluded.login_source,
+           status=excluded.status,last_sync_at=excluded.last_sync_at,error=excluded.error`)
+        .run(provider, account_ref, plan_type, login_source, status, last_sync_at, error);
+    },
+    usageAccounts() {
+      return q('SELECT * FROM usage_accounts ORDER BY provider').all();
+    },
+    projectRoot(rootPath) {
+      return q(`SELECT pr.*,p.name project_name FROM project_roots pr
+                JOIN projects p ON p.id=pr.project_id WHERE pr.root_path=?`).get(rootPath) ?? null;
+    },
+    setProjectRoot({ root_path, project_id, provider = null }) {
+      q(`INSERT INTO project_roots(root_path,project_id,provider,created_at) VALUES(?,?,?,?)
+         ON CONFLICT(root_path) DO UPDATE SET project_id=excluded.project_id,
+           provider=COALESCE(excluded.provider,project_roots.provider)`)
+        .run(root_path, project_id, provider, now());
+    },
+    projectRoots() {
+      return q(`SELECT pr.*,p.name project_name FROM project_roots pr
+                JOIN projects p ON p.id=pr.project_id ORDER BY p.name,pr.root_path`).all();
+    },
+    upsertUsageSession(s) {
+      q(`INSERT INTO usage_sessions
+          (provider,session_id,project_id,cwd,title,model,started_at,updated_at,input_tokens,
+           cached_tokens,output_tokens,reasoning_tokens,total_tokens,raw_ref)
+         VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+         ON CONFLICT(provider,session_id) DO UPDATE SET
+           project_id=excluded.project_id,cwd=excluded.cwd,title=excluded.title,model=excluded.model,
+           started_at=excluded.started_at,updated_at=excluded.updated_at,
+           input_tokens=excluded.input_tokens,cached_tokens=excluded.cached_tokens,
+           output_tokens=excluded.output_tokens,reasoning_tokens=excluded.reasoning_tokens,
+           total_tokens=excluded.total_tokens,raw_ref=excluded.raw_ref`)
+        .run(s.provider, s.session_id, s.project_id ?? null, s.cwd ?? null, s.title ?? null,
+          s.model ?? null, s.started_at ?? null, s.updated_at ?? null, s.input_tokens ?? 0,
+          s.cached_tokens ?? 0, s.output_tokens ?? 0, s.reasoning_tokens ?? 0,
+          s.total_tokens ?? 0, s.raw_ref ?? null);
+    },
+    replaceUsageTurns(provider, sessionId, turns = []) {
+      q('DELETE FROM usage_turns WHERE provider=? AND session_id=?').run(provider, sessionId);
+      const insert = q(`INSERT INTO usage_turns
+        (provider,session_id,turn_id,title,model,started_at,updated_at,input_tokens,cached_tokens,
+         output_tokens,reasoning_tokens,total_tokens) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)`);
+      for (const t of turns) insert.run(provider, sessionId, t.turn_id, t.title ?? null, t.model ?? null,
+        t.started_at ?? null, t.updated_at ?? null, t.input_tokens ?? 0, t.cached_tokens ?? 0,
+        t.output_tokens ?? 0, t.reasoning_tokens ?? 0, t.total_tokens ?? 0);
+    },
+    addQuotaSnapshot({ provider, window_name, used_percent = null, window_minutes = null, resets_at = null, credits = null, captured_at = now() }) {
+      q(`INSERT INTO quota_snapshots(provider,window_name,used_percent,window_minutes,resets_at,credits_json,captured_at)
+         VALUES(?,?,?,?,?,?,?) ON CONFLICT(provider,window_name,captured_at) DO UPDATE SET
+           used_percent=excluded.used_percent,window_minutes=excluded.window_minutes,
+           resets_at=excluded.resets_at,credits_json=excluded.credits_json`)
+        .run(provider, window_name, used_percent, window_minutes, resets_at, J(credits), captured_at);
+    },
+    latestQuota(provider = null) {
+      const rows = provider
+        ? q(`SELECT * FROM quota_snapshots q WHERE provider=? AND captured_at=(
+             SELECT MAX(captured_at) FROM quota_snapshots WHERE provider=q.provider) ORDER BY window_name`).all(provider)
+        : q(`SELECT * FROM quota_snapshots q WHERE captured_at=(
+             SELECT MAX(captured_at) FROM quota_snapshots WHERE provider=q.provider) ORDER BY provider,window_name`).all();
+      return rows.map((r) => parse(r, 'credits_json'));
+    },
+    usageCursor(provider, filePath) {
+      return q('SELECT * FROM usage_ingest_cursors WHERE provider=? AND file_path=?').get(provider, filePath) ?? null;
+    },
+    setUsageCursor({ provider, file_path, byte_offset = 0, file_size = 0, mtime_ms = 0 }) {
+      q(`INSERT INTO usage_ingest_cursors(provider,file_path,byte_offset,file_size,mtime_ms,updated_at)
+         VALUES(?,?,?,?,?,?) ON CONFLICT(provider,file_path) DO UPDATE SET
+           byte_offset=excluded.byte_offset,file_size=excluded.file_size,
+           mtime_ms=excluded.mtime_ms,updated_at=excluded.updated_at`)
+        .run(provider, file_path, byte_offset, file_size, mtime_ms, now());
+    },
+    usageSessions({ provider = null, projectId = null, since = null, limit = 200 } = {}) {
+      return q(`SELECT s.*,p.name project_name FROM usage_sessions s
+                LEFT JOIN projects p ON p.id=s.project_id
+                WHERE (? IS NULL OR s.provider=?) AND (? IS NULL OR s.project_id=?)
+                  AND (? IS NULL OR s.updated_at>=?)
+                ORDER BY s.updated_at DESC LIMIT ?`)
+        .all(provider, provider, projectId, projectId, since, since, limit);
+    },
+    usageSession(provider, sessionId) {
+      const session = q(`SELECT s.*,p.name project_name FROM usage_sessions s
+                         LEFT JOIN projects p ON p.id=s.project_id
+                         WHERE s.provider=? AND s.session_id=?`).get(provider, sessionId);
+      if (!session) return null;
+      session.turns = q(`SELECT * FROM usage_turns WHERE provider=? AND session_id=?
+                         ORDER BY started_at,turn_id`).all(provider, sessionId);
+      return session;
+    },
+    usageSummary() {
+      const totals = q(`SELECT provider,COUNT(*) sessions,COUNT(DISTINCT project_id) projects,
+                        COALESCE(SUM(input_tokens),0) input_tokens,
+                        COALESCE(SUM(cached_tokens),0) cached_tokens,
+                        COALESCE(SUM(output_tokens),0) output_tokens,
+                        COALESCE(SUM(reasoning_tokens),0) reasoning_tokens,
+                        COALESCE(SUM(total_tokens),0) total_tokens,
+                        MAX(updated_at) latest_at
+                        FROM usage_sessions GROUP BY provider ORDER BY provider`).all();
+      const projects = q(`SELECT p.id,p.name,COUNT(*) sessions,
+                          COALESCE(SUM(s.total_tokens),0) total_tokens,MAX(s.updated_at) latest_at
+                          FROM usage_sessions s JOIN projects p ON p.id=s.project_id
+                          GROUP BY p.id,p.name ORDER BY total_tokens DESC LIMIT 50`).all();
+      return { accounts: api.usageAccounts(), quota: api.latestQuota(), totals, projects };
     },
 
     // ---- action queue (propose-and-confirm) ------------------------------
@@ -365,6 +480,11 @@ export function openMemory(dbPath) {
         agent_tasks: all('agent_tasks'),
         execution_traces: all('execution_traces'),
         component_catalog: all('component_catalog'),
+        usage_accounts: all('usage_accounts'),
+        project_roots: all('project_roots'),
+        usage_sessions: all('usage_sessions'),
+        usage_turns: all('usage_turns'),
+        quota_snapshots: all('quota_snapshots'),
       };
     },
   };

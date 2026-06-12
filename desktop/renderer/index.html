@@ -26,6 +26,7 @@
     <button class="tab" data-tab="monitors" data-i18n="tab.monitors">Monitors</button>
     <button class="tab" data-tab="config" data-i18n="tab.config">Config</button>
     <button class="tab" data-tab="accounts" data-i18n="tab.accounts">Accounts</button>
+    <button class="tab" data-tab="usage" data-i18n="tab.usage">Usage</button>
     <button class="tab" data-tab="actions" data-i18n="tab.actions">Actions</button>
     <button class="tab" data-tab="schedule" data-i18n="tab.schedule">Schedule</button>
   </nav>
@@ -78,6 +79,34 @@
       </div>
       <h2 data-i18n="accounts.connections">Connections</h2>
       <div id="accounts"></div>
+    </section>
+
+    <!-- USAGE -->
+    <section id="tab-usage" class="panel">
+      <div class="row">
+        <button id="usage-sync" class="primary" data-i18n="usage.sync">Sync now</button>
+        <select id="usage-provider" class="lang-select">
+          <option value="" data-i18n="usage.allProviders">All providers</option>
+          <option value="claude">Claude</option>
+          <option value="codex">Codex</option>
+        </select>
+        <select id="usage-project" class="lang-select">
+          <option value="" data-i18n="usage.allProjects">All projects</option>
+        </select>
+        <select id="usage-range" class="lang-select">
+          <option value="7" data-i18n="usage.days7">Last 7 days</option>
+          <option value="30" data-i18n="usage.days30">Last 30 days</option>
+          <option value="" data-i18n="usage.allTime">All time</option>
+        </select>
+        <span id="usage-msg" class="muted"></span>
+      </div>
+      <div id="usage-quota" class="cards"></div>
+      <p class="muted" data-i18n="usage.external">Web, mobile, and other-computer usage is reflected in account quota only and cannot be attributed locally.</p>
+      <h2 data-i18n="usage.projects">Projects</h2>
+      <div id="usage-projects"></div>
+      <h2 data-i18n="usage.sessions">Sessions</h2>
+      <div id="usage-sessions"></div>
+      <div id="usage-detail"></div>
     </section>
 
     <!-- ACTIONS -->
