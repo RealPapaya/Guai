@@ -23,6 +23,7 @@ contextBridge.exposeInMainWorld('guai', {
   openDashboard: () => invoke('guai:dashboard:open'),
   syncUsage: () => invoke('guai:usage:sync'),
   usageSummary: () => invoke('guai:usage:summary'),
+  usageCharts: (opts) => invoke('guai:usage:charts', opts || {}),
   usageSessions: (filters) => invoke('guai:usage:sessions', filters),
   usageSession: (provider, id) => invoke('guai:usage:session', { provider, id }),
   // Chat console: run ONE whitelisted, read-only control command (no args/stdin). The

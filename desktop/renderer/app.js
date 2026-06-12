@@ -41,6 +41,8 @@ const I18N = {
     'settings.title': 'Settings',
     'settings.back': 'Back',
     'settings.general': 'General',
+    'settings.language': 'Language',
+    'settings.languageDesc': 'Choose the language used throughout Guai.',
 
     'chat.placeholder': 'Type a command (sweep, brief, status)…',
     'chat.qa.brief': 'Run brief',
@@ -202,6 +204,16 @@ const I18N = {
     'usage.updated': 'Updated',
     'usage.turns': 'Turns',
     'usage.external': 'Web, mobile, and other-computer usage is reflected in account quota only and cannot be attributed locally.',
+    'status.subtab.overview': 'Overview',
+    'status.subtab.usage': 'Usage',
+    'usage.chart.bar': 'Bar',
+    'usage.chart.line': 'Line',
+    'usage.chart.quotaTrend': 'Quota trend',
+    'usage.chart.dailyTokens': 'Daily tokens',
+    'usage.window.5h': '5h limit',
+    'usage.window.weekly': 'Weekly limit',
+    'usage.noChart': 'No usage data yet — press Sync now.',
+    'usage.noQuota': 'No quota data yet — press Sync now.',
   },
   'zh-TW': {
     'brand.subtitle': '首席幕僚',
@@ -214,6 +226,8 @@ const I18N = {
     'settings.title': '設定',
     'settings.back': '返回',
     'settings.general': '一般',
+    'settings.language': '語言',
+    'settings.languageDesc': '選擇 Guai 介面使用的語言。',
 
     'chat.placeholder': '輸入指令（sweep、brief、status）…',
     'chat.qa.brief': '執行簡報',
@@ -375,6 +389,16 @@ const I18N = {
     'usage.updated': '更新時間',
     'usage.turns': '回合',
     'usage.external': '網頁、手機及其他電腦的用量只會反映於帳戶配額，無法歸因至本機專案。',
+    'status.subtab.overview': '總覽',
+    'status.subtab.usage': '用量',
+    'usage.chart.bar': '長條圖',
+    'usage.chart.line': '折線圖',
+    'usage.chart.quotaTrend': '配額走勢',
+    'usage.chart.dailyTokens': '每日 token',
+    'usage.window.5h': '5 小時',
+    'usage.window.weekly': '每週',
+    'usage.noChart': '尚無用量資料 — 請按「立即同步」。',
+    'usage.noQuota': '尚無配額資料 — 請按「立即同步」。',
   },
 };
 
@@ -422,6 +446,20 @@ function icon(name, cls = 'icon') {
   svg.appendChild(use);
   return svg;
 }
+/** Build an SVG-namespaced element with attributes + children. Geometry/fill go through
+ *  presentation ATTRIBUTES (not the style property), so strict style-src CSP stays intact. */
+function svgEl(tag, attrs, ...kids) {
+  const node = document.createElementNS(SVGNS, tag);
+  for (const [k, v] of Object.entries(attrs || {})) if (v != null) node.setAttribute(k, String(v));
+  for (const kid of kids) if (kid != null && kid !== false) node.append(kid);
+  return node;
+}
+/** A sprite logo as a standalone <svg> (vs icon(): same, kept for clarity at call sites). */
+function logo(name, cls) {
+  const svg = svgEl('svg', { class: cls, 'aria-hidden': 'true' });
+  svg.appendChild(svgEl('use', { href: '#' + name }));
+  return svg;
+}
 
 /** Unwrap a {ok,data}|{ok:false,error} bridge reply, throwing on error. */
 async function call(promise) {
@@ -446,7 +484,7 @@ function setPath(o, p, v) {
 // --- tabs + settings (two independent routers; they key off #tab-* vs #set-*) ----
 
 let lastTab = 'chat';
-const LOADERS = { chat: loadChat, jobs: loadJobs, status: loadStatus };
+const LOADERS = { chat: loadChat, jobs: loadJobs, status: loadStatusTab };
 function activate(name) {
   $$('.tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === name));
   $$('.panel').forEach((p) => p.classList.toggle('active', p.id === `tab-${name}`));
@@ -481,7 +519,18 @@ function setArmed(on) {
   b.className = 'badge ' + (on ? 'badge-armed' : 'badge-idle');
 }
 
-// --- STATUS -------------------------------------------------------------------
+// --- STATUS (Overview / Usage sub-tabs) ---------------------------------------
+
+let lastStatusSub = 'overview';
+/** Entry point when the Status tab is opened — defer to the active sub-tab. */
+function loadStatusTab() { activateStatusSub(lastStatusSub); }
+function activateStatusSub(name) {
+  $$('.subtab').forEach((b) => b.classList.toggle('active', b.dataset.subtab === name));
+  $$('.status-sub').forEach((s) => s.classList.toggle('active', s.id === `status-${name}`));
+  lastStatusSub = name;
+  if (name === 'usage') loadStatusUsage(); else loadStatus();
+}
+$$('.subtab').forEach((b) => b.addEventListener('click', () => activateStatusSub(/** @type {string} */(b.dataset.subtab))));
 
 async function loadStatus() {
   const cards = $('#status-cards'); const findings = $('#findings');
@@ -784,6 +833,208 @@ $('#usage-sync').addEventListener('click', async () => {
 });
 for (const id of ['usage-provider', 'usage-project', 'usage-range']) $('#' + id).addEventListener('change', loadUsage);
 
+// --- STATUS → USAGE charts ----------------------------------------------------
+// Graphical view of provider quota (5h / weekly limits) and token consumption.
+// Everything is drawn as inline SVG via attributes (no inline CSS ⇒ CSP-safe).
+
+const PROVIDER_META = {
+  claude: { label: 'Claude', icon: 'ic-claude', brand: 'brand-claude', color: '#da7756', dim: '#a8543b' },
+  codex: { label: 'Codex', icon: 'ic-openai', brand: 'brand-codex', color: '#10a37f', dim: '#0a6e56' },
+};
+const provMeta = (p) => PROVIDER_META[p] || { label: p, icon: 'ic-status', brand: '', color: '#6b9bd1', dim: '#41648a' };
+
+/** Normalize a provider's window name into '5h' | 'weekly' | raw, for friendly labels + ordering. */
+function windowKind(row) {
+  const n = String(row.window_name || '').toLowerCase();
+  if (/(seven|week|secondary|7d|day)/.test(n)) return 'weekly';
+  if (/(five|hour|primary|5h)/.test(n)) return '5h';
+  if (row.window_minutes >= 1440) return 'weekly';
+  if (row.window_minutes) return '5h';
+  return n || 'other';
+}
+const windowLabel = (kind) => (kind === '5h' || kind === 'weekly') ? t('usage.window.' + kind) : kind;
+const WINDOW_ORDER = { '5h': 0, weekly: 1 };
+/** A series color: provider base for the 5h window, dimmed for weekly/other. */
+const windowColor = (provider, kind) => kind === '5h' ? provMeta(provider).color : provMeta(provider).dim;
+
+let usageChartType = 'bar';   // 'bar' | 'line'
+let usageLineKind = 'quota';  // 'quota' | 'tokens'
+/** @type {any} */ let usageChartData = null;
+
+async function loadStatusUsage() {
+  const msg = $('#usage-chart-msg');
+  const days = Number(/** @type {HTMLSelectElement} */ ($('#usage-chart-range')).value) || 0;
+  try {
+    usageChartData = await call(api.usageCharts({ days }));
+    renderUsageChart();
+  } catch (e) { msg.textContent = ''; $('#usage-chart').replaceChildren(el('div', { class: 'err', text: e.message })); }
+}
+
+function renderUsageChart() {
+  $('#usage-linekind').classList.toggle('hidden', usageChartType !== 'line');
+  if (usageChartType === 'bar') renderUsageBars();
+  else renderUsageLine();
+}
+
+/** Horizontal quota bars: a block per provider, brand-tinted logo + a bar per window. */
+function renderUsageBars() {
+  const wrap = $('#usage-chart'); const legend = $('#usage-legend');
+  legend.replaceChildren();
+  const data = usageChartData || {};
+  const rows = data.quota || [];
+  if (!rows.length) { wrap.replaceChildren(el('div', { class: 'empty', text: t('usage.noQuota') })); return; }
+  const accounts = Object.fromEntries((data.accounts || []).map((a) => [a.provider, a]));
+  const byProv = {};
+  for (const r of rows) (byProv[r.provider] ||= []).push(r);
+  const order = (p) => (p === 'claude' ? 0 : p === 'codex' ? 1 : 2);
+  const providers = Object.keys(byProv).sort((a, b) => order(a) - order(b));
+  wrap.replaceChildren(...providers.map((p) => {
+    const m = provMeta(p); const acct = accounts[p] || {};
+    const wins = byProv[p].slice().sort((a, b) =>
+      (WINDOW_ORDER[windowKind(a)] ?? 9) - (WINDOW_ORDER[windowKind(b)] ?? 9));
+    const head = el('div', { class: 'uphead ' + m.brand },
+      logo(m.icon, 'uplogo'),
+      el('span', { class: 'upname', text: m.label }),
+      el('span', { class: 'upmeta', text: acct.plan_type ? acct.plan_type : '' }));
+    const bars = wins.flatMap((w) => {
+      const kind = windowKind(w);
+      const pct = w.used_percent == null ? 0 : Math.max(0, Math.min(100, w.used_percent));
+      const track = el('div', { class: 'bar-track' },
+        svgEl('svg', { viewBox: '0 0 100 14', preserveAspectRatio: 'none' },
+          svgEl('rect', { x: 0, y: 0, width: pct.toFixed(2), height: 14, fill: windowColor(p, kind) })));
+      const out = [el('div', { class: 'qbar' },
+        el('div', { class: 'qlabel', text: windowLabel(kind) }),
+        track,
+        el('div', { class: 'qpct', text: w.used_percent == null ? '—' : `${Math.round(w.used_percent)}%` }))];
+      if (w.resets_at) out.push(el('div', { class: 'qbar' },
+        el('div', {}), el('div', { class: 'qreset', text: t('usage.resets', { time: fmtTime(w.resets_at) }) }), el('div', {})));
+      return out;
+    });
+    return el('div', { class: 'usage-provider' }, head, ...bars);
+  }));
+}
+
+/** Switchable line chart: quota-% trend, or daily token consumption. */
+function renderUsageLine() {
+  const wrap = $('#usage-chart'); const legend = $('#usage-legend');
+  const data = usageChartData || {};
+  /** @type {{key:string,label:string,color:string,brand:string,icon:string,pts:[number,number][]}[]} */
+  let series = []; let opts;
+
+  if (usageLineKind === 'quota') {
+    const hist = (data.quotaHistory || []).filter((r) => r.used_percent != null);
+    const groups = {};
+    for (const r of hist) {
+      const kind = windowKind(r); const key = `${r.provider}:${kind}`;
+      (groups[key] ||= { provider: r.provider, kind, pts: [] }).pts.push([r.captured_at, r.used_percent]);
+    }
+    const ts = hist.map((r) => r.captured_at);
+    const xMin = Math.min(...ts), xMax = Math.max(...ts);
+    series = Object.values(groups).map((g) => ({
+      key: `${g.provider}:${g.kind}`, label: `${provMeta(g.provider).label} ${windowLabel(g.kind)}`,
+      color: windowColor(g.provider, g.kind), brand: provMeta(g.provider).brand, icon: provMeta(g.provider).icon,
+      pts: g.pts.sort((a, b) => a[0] - b[0]),
+    }));
+    opts = { xMin, xMax, yMin: 0, yMax: 100, yTicks: [0, 25, 50, 75, 100], yFmt: (v) => `${v}%`, xFmt: fmtDay };
+  } else {
+    const daily = data.daily || [];
+    const groups = {};
+    for (const r of daily) (groups[r.provider] ||= []).push(r);
+    const days = [...new Set(daily.map((r) => r.day))].sort();
+    const idx = Object.fromEntries(days.map((d, i) => [d, i]));
+    let maxTok = 0;
+    series = Object.keys(groups).map((p) => {
+      const pts = groups[p].map((r) => { maxTok = Math.max(maxTok, r.total_tokens); return [idx[r.day], r.total_tokens]; });
+      return { key: p, label: provMeta(p).label, color: provMeta(p).color, brand: provMeta(p).brand,
+        icon: provMeta(p).icon, pts: pts.sort((a, b) => a[0] - b[0]) };
+    });
+    const yMax = niceMax(maxTok);
+    opts = { xMin: 0, xMax: Math.max(1, days.length - 1), yMin: 0, yMax,
+      yTicks: [0, yMax / 2, yMax], yFmt: fmtTokens, xFmt: (i) => fmtDay(days[Math.round(i)]), xIsIndex: true };
+  }
+
+  const hasData = series.some((s) => s.pts.length);
+  if (!hasData) { wrap.replaceChildren(el('div', { class: 'empty', text: t('usage.noChart') })); legend.replaceChildren(); return; }
+  wrap.replaceChildren(lineChart(series, opts));
+  legend.replaceChildren(...series.filter((s) => s.pts.length).map((s) => el('span', { class: 'lg ' + s.brand },
+    svgEl('svg', { class: 'sw', viewBox: '0 0 12 12' }, svgEl('rect', { x: 0, y: 0, width: 12, height: 12, rx: 3, fill: s.color })),
+    el('span', { text: s.label }))));
+}
+
+const fmtDay = (d) => {
+  if (d == null) return '';
+  const date = typeof d === 'number' ? new Date(d) : new Date(d + 'T00:00:00');
+  return new Intl.DateTimeFormat(LANG, { month: 'numeric', day: 'numeric' }).format(date);
+};
+/** Round a max value up to a clean 1/2/5 × 10ⁿ tick so the axis reads nicely. */
+function niceMax(v) {
+  if (!v || v <= 0) return 1;
+  const pow = Math.pow(10, Math.floor(Math.log10(v)));
+  const n = v / pow;
+  return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * pow;
+}
+
+/** Render series as an SVG line chart with gridlines, y/x ticks, and per-point dots. */
+function lineChart(series, opts) {
+  const W = 640, H = 240, L = 48, R = 16, T = 14, B = 30;
+  const pw = W - L - R, ph = H - T - B;
+  const sx = (x) => L + (opts.xMax === opts.xMin ? 0.5 : (x - opts.xMin) / (opts.xMax - opts.xMin)) * pw;
+  const sy = (y) => T + (1 - (y - opts.yMin) / (opts.yMax - opts.yMin || 1)) * ph;
+  const svg = svgEl('svg', { class: 'chart-svg', viewBox: `0 0 ${W} ${H}`, preserveAspectRatio: 'xMidYMid meet' });
+
+  // Y gridlines + labels
+  for (const yt of opts.yTicks) {
+    const y = sy(yt);
+    svg.append(svgEl('line', { class: 'grid', x1: L, y1: y.toFixed(1), x2: W - R, y2: y.toFixed(1) }));
+    svg.append(svgEl('text', { class: 'axis-text', x: L - 6, y: (y + 3.5).toFixed(1), 'text-anchor': 'end' }, document.createTextNode(opts.yFmt(yt))));
+  }
+  // X tick labels — sample up to 6 evenly spaced positions across the domain.
+  const xticks = [];
+  const span = opts.xMax - opts.xMin;
+  const steps = Math.min(6, Math.max(1, opts.xIsIndex ? opts.xMax : 5));
+  for (let i = 0; i <= steps; i++) {
+    const xv = opts.xMin + (span * i) / steps;
+    xticks.push(xv);
+  }
+  for (const xv of [...new Set(xticks)]) {
+    svg.append(svgEl('text', { class: 'axis-text', x: sx(xv).toFixed(1), y: H - 10, 'text-anchor': 'middle' },
+      document.createTextNode(opts.xFmt(xv))));
+  }
+  // Series polylines + dots
+  for (const s of series) {
+    if (!s.pts.length) continue;
+    const pts = s.pts.map(([x, y]) => `${sx(x).toFixed(1)},${sy(y).toFixed(1)}`).join(' ');
+    svg.append(svgEl('polyline', { points: pts, fill: 'none', stroke: s.color, 'stroke-width': 2,
+      'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
+    for (const [x, y] of s.pts) {
+      const c = svgEl('circle', { class: 'dot', cx: sx(x).toFixed(1), cy: sy(y).toFixed(1), r: s.pts.length > 40 ? 1.5 : 3, fill: s.color });
+      c.append(svgEl('title', {}, document.createTextNode(`${s.label}: ${opts.yFmt(Math.round(y))}`)));
+      svg.append(c);
+    }
+  }
+  return svg;
+}
+
+// chart-type toggle (bar / line) — re-renders from already-loaded data, no refetch.
+$$('#usage-charttype button').forEach((b) => b.addEventListener('click', () => {
+  usageChartType = /** @type {string} */ (b.dataset.charttype);
+  $$('#usage-charttype button').forEach((x) => x.classList.toggle('active', x === b));
+  renderUsageChart();
+}));
+$$('#usage-linekind button').forEach((b) => b.addEventListener('click', () => {
+  usageLineKind = /** @type {string} */ (b.dataset.linekind);
+  $$('#usage-linekind button').forEach((x) => x.classList.toggle('active', x === b));
+  renderUsageChart();
+}));
+$('#usage-chart-range').addEventListener('change', loadStatusUsage);
+$('#usage-chart-sync').addEventListener('click', async () => {
+  const btn = /** @type {HTMLButtonElement} */ ($('#usage-chart-sync')); const msg = $('#usage-chart-msg');
+  btn.disabled = true; msg.className = 'muted'; msg.textContent = t('usage.syncing');
+  try { await call(api.syncUsage()); flash(msg, t('usage.done'), false); await loadStatusUsage(); }
+  catch (e) { flash(msg, e.message, true); }
+  finally { btn.disabled = false; }
+});
+
 // --- ACTIONS ------------------------------------------------------------------
 
 async function loadActions() {
@@ -1038,7 +1289,7 @@ $('#job-add').addEventListener('click', () => {
 $('#lang-select').addEventListener('change', (e) => setLang(/** @type {HTMLSelectElement} */ (e.target).value, true));
 api.onRefreshed(() => {
   if (document.body.classList.contains('settings-open')) { if (lastSettings === 'usage') loadUsage(); return; }
-  if (lastTab === 'status') loadStatus();
+  if (lastTab === 'status') activateStatusSub(lastStatusSub);
 });
 
 (async function boot() {

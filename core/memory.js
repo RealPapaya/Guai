@@ -322,6 +322,22 @@ export function openMemory(dbPath) {
                           GROUP BY p.id,p.name ORDER BY total_tokens DESC LIMIT 50`).all();
       return { accounts: api.usageAccounts(), quota: api.latestQuota(), totals, projects };
     },
+    // Time-series feed for the desktop Status → Usage charts. `days` bounds both series;
+    // null/0 means all history. quotaHistory drives the quota-% trend line, daily the
+    // per-provider token line; quota (latest) + accounts drive the bar chart.
+    usageCharts({ days = 30 } = {}) {
+      const since = days ? now() - Number(days) * 864e5 : 0;
+      const quotaHistory = q(`SELECT provider,window_name,used_percent,window_minutes,resets_at,captured_at
+                              FROM quota_snapshots WHERE captured_at >= ?
+                              ORDER BY captured_at`).all(since);
+      // Daily consumption from turns (per-turn timestamps ⇒ truer than session updated_at).
+      const daily = q(`SELECT provider,
+                       strftime('%Y-%m-%d', started_at/1000, 'unixepoch', 'localtime') day,
+                       COALESCE(SUM(total_tokens),0) total_tokens
+                       FROM usage_turns WHERE started_at IS NOT NULL AND started_at >= ?
+                       GROUP BY provider,day ORDER BY day`).all(since);
+      return { accounts: api.usageAccounts(), quota: api.latestQuota(), quotaHistory, daily };
+    },
 
     // ---- action queue (propose-and-confirm) ------------------------------
     enqueueAction({ kind, payload, rationale = null, related_finding_id = null, ttlMs = 7 * 864e5 }) {

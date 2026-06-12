@@ -117,6 +117,7 @@ handle('guai:dashboard:open', async () => {
 });
 handle('guai:usage:sync', () => runControl(['usage-sync']));
 handle('guai:usage:summary', () => runControl(['usage-summary']));
+handle('guai:usage:charts', (opts = {}) => runControl(['usage-charts', ...(opts.days ? [`--days=${opts.days}`] : [])]));
 handle('guai:usage:sessions', (filters = {}) => {
   const args = ['usage-sessions'];
   if (filters.provider) args.push(`--provider=${filters.provider}`);
@@ -278,6 +279,17 @@ function createWindow() {
       if (process.env.GUAI_SMOKE_USAGE) {
         // Usage moved under the gear → open Settings, then select the Usage section.
         setTimeout(() => win.webContents.executeJavaScript(`document.getElementById('open-settings').click(); document.querySelector('[data-set="usage"]').click()`), 300);
+      }
+      if (process.env.GUAI_SMOKE_STATUS_USAGE) {
+        // Status → Usage sub-tab: the graphical quota/token charts. Value = bar|line|tokens.
+        const v = process.env.GUAI_SMOKE_STATUS_USAGE;
+        const type = v === 'bar' ? 'bar' : 'line';
+        const linekind = v === 'tokens' ? 'tokens' : 'quota';
+        setTimeout(() => win.webContents.executeJavaScript(
+          `document.querySelector('.tab[data-tab="status"]').click();` +
+          `document.querySelector('.subtab[data-subtab="usage"]').click();` +
+          `document.querySelector('#usage-charttype [data-charttype="${type}"]').click();` +
+          (type === 'line' ? `document.querySelector('#usage-linekind [data-linekind="${linekind}"]').click();` : '')), 400);
       }
       setTimeout(async () => { // let the status IPC round-trip resolve and render first
         try {
