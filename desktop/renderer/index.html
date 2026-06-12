@@ -9,6 +9,44 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <!-- Inline SVG sprite (same-document <use> ⇒ CSP-safe; presentation via CSS currentColor). -->
+  <svg class="svg-sprite" width="0" height="0" aria-hidden="true">
+    <symbol id="ic-chat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7A8.4 8.4 0 0 1 3.9 11 8.4 8.4 0 0 1 12.4 3 8.4 8.4 0 0 1 21 11.5z"/>
+    </symbol>
+    <symbol id="ic-jobs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/>
+    </symbol>
+    <symbol id="ic-status" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 12h4l3 8 4-16 3 8h4"/>
+    </symbol>
+    <symbol id="ic-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 0 1-4 0v-.1A1.6 1.6 0 0 0 6.8 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0-1.1-2.7H1a2 2 0 0 1 0-4h.1A1.6 1.6 0 0 0 2.6 6.8a1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H7a1.6 1.6 0 0 0 1-1.5V1a2 2 0 0 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V7a1.6 1.6 0 0 0 1.5 1H23a2 2 0 0 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/>
+    </symbol>
+    <symbol id="ic-sweep" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 21l6-6"/><path d="M9 15l6-9 3 3-9 6z"/><path d="M14 6l4 4"/>
+    </symbol>
+    <symbol id="ic-brief" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/>
+    </symbol>
+    <symbol id="ic-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/>
+    </symbol>
+    <symbol id="ic-add" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 5v14M5 12h14"/>
+    </symbol>
+    <symbol id="ic-back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M15 18l-6-6 6-6"/>
+    </symbol>
+    <symbol id="ic-send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/>
+    </symbol>
+    <symbol id="ic-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M18 6L6 18M6 6l12 12"/>
+    </symbol>
+  </svg>
+
   <header>
     <div class="brand"><span class="hex">⬢</span> Guai <span class="muted" data-i18n="brand.subtitle">Chief of Staff</span></div>
     <div class="header-right">
@@ -17,23 +55,50 @@
         <option value="zh-TW">中文</option>
       </select>
       <span id="armed-badge" class="badge badge-idle">idle</span>
-      <button id="refresh" class="ghost" data-i18n-title="refresh" title="Refresh">↻</button>
+      <button id="refresh" class="ghost icon-btn" data-i18n-title="refresh" title="Refresh"><svg class="icon"><use href="#ic-refresh"/></svg></button>
+      <button id="open-settings" class="ghost icon-btn" data-i18n-title="settings.title" title="Settings"><svg class="icon"><use href="#ic-gear"/></svg></button>
     </div>
   </header>
 
   <nav id="tabs">
-    <button class="tab active" data-tab="status" data-i18n="tab.status">Status</button>
-    <button class="tab" data-tab="monitors" data-i18n="tab.monitors">Monitors</button>
-    <button class="tab" data-tab="config" data-i18n="tab.config">Config</button>
-    <button class="tab" data-tab="accounts" data-i18n="tab.accounts">Accounts</button>
-    <button class="tab" data-tab="usage" data-i18n="tab.usage">Usage</button>
-    <button class="tab" data-tab="actions" data-i18n="tab.actions">Actions</button>
-    <button class="tab" data-tab="schedule" data-i18n="tab.schedule">Schedule</button>
+    <button class="tab active" data-tab="chat"><svg class="icon"><use href="#ic-chat"/></svg><span data-i18n="tab.chat">Chat</span></button>
+    <button class="tab" data-tab="jobs"><svg class="icon"><use href="#ic-jobs"/></svg><span data-i18n="tab.jobs">Jobs</span></button>
+    <button class="tab" data-tab="status"><svg class="icon"><use href="#ic-status"/></svg><span data-i18n="tab.status">Status</span></button>
   </nav>
 
   <main>
-    <!-- STATUS -->
-    <section id="tab-status" class="panel active">
+    <!-- CHAT -->
+    <section id="tab-chat" class="panel active">
+      <div id="chat-log" class="chat-log"></div>
+      <div class="chat-bar">
+        <div class="quick-actions">
+          <button class="qa" data-cmd="sweep"><svg class="icon"><use href="#ic-sweep"/></svg><span data-i18n="status.runSweep">Run sweep now</span></button>
+          <button class="qa" data-cmd="brief"><svg class="icon"><use href="#ic-brief"/></svg><span data-i18n="chat.qa.brief">Run brief</span></button>
+          <button class="qa" data-cmd="status"><svg class="icon"><use href="#ic-status"/></svg><span data-i18n="tab.status">Status</span></button>
+        </div>
+        <div class="composer">
+          <input id="chat-input" type="text" autocomplete="off" spellcheck="false" data-i18n-ph="chat.placeholder" />
+          <button id="chat-send" class="primary icon-btn"><svg class="icon"><use href="#ic-send"/></svg></button>
+        </div>
+      </div>
+    </section>
+
+    <!-- JOBS -->
+    <section id="tab-jobs" class="panel">
+      <div class="jobs-layout">
+        <aside class="jobs-side">
+          <div class="row jobs-side-head">
+            <button id="job-add" class="ghost icon-btn"><svg class="icon"><use href="#ic-add"/></svg><span data-i18n="jobs.add">Add job</span></button>
+            <span id="jobs-msg" class="muted"></span>
+          </div>
+          <div id="job-list"></div>
+        </aside>
+        <div id="job-editor" class="job-editor"></div>
+      </div>
+    </section>
+
+    <!-- STATUS (+ Pending approvals + Monitors) -->
+    <section id="tab-status" class="panel">
       <div class="row">
         <button id="run-sweep" class="primary" data-i18n="status.runSweep">Run sweep now</button>
         <button id="open-dashboard" class="ghost" data-i18n="status.openDashboard">Open full dashboard ↗</button>
@@ -42,93 +107,102 @@
       <div id="status-cards" class="cards"></div>
       <h2 data-i18n="status.topFindings">Top open findings</h2>
       <div id="findings"></div>
-    </section>
-
-    <!-- MONITORS -->
-    <section id="tab-monitors" class="panel">
+      <h2 data-i18n="status.pendingApprovals">Pending approvals</h2>
+      <div id="actions"></div>
+      <h2 data-i18n="tab.monitors">Monitors</h2>
       <p class="muted" data-i18n="monitors.intro">Arm or disarm each domain independently. dev and cost run in
         the deterministic sweep (and the "Run sweep now" button). email and calendar
         need Claude Code's MCP agents, so they only run inside the scheduled Claude Code sweep —
         the toggle here is honored there.</p>
       <div id="monitors"></div>
     </section>
-
-    <!-- CONFIG -->
-    <section id="tab-config" class="panel">
-      <p class="muted" data-i18n="config.intro">Edits are validated and saved to config/guai.config.json.
-        A running sweep/brief picks them up on its next run (no hot reload).</p>
-      <form id="config-form" class="form"></form>
-      <div class="row">
-        <button id="config-save" class="primary" data-i18n="config.save">Save config</button>
-        <span id="config-msg" class="muted"></span>
-      </div>
-    </section>
-
-    <!-- ACCOUNTS -->
-    <section id="tab-accounts" class="panel">
-      <p class="muted" data-i18n="accounts.intro">Connect the accounts Guai monitors and acts through. Tokens are
-        stored locally in state/secrets.json (gitignored) and never leave this machine. Environment variables
-        take precedence over saved tokens.</p>
-      <form id="identity-form" class="form">
-        <label for="acct-owner" data-i18n="accounts.ownerLabel">Owner email</label>
-        <input id="acct-owner" type="text" autocomplete="off" />
-      </form>
-      <div class="row">
-        <button id="identity-save" class="primary" data-i18n="accounts.saveIdentity">Save</button>
-        <span id="identity-msg" class="muted"></span>
-      </div>
-      <h2 data-i18n="accounts.connections">Connections</h2>
-      <div id="accounts"></div>
-    </section>
-
-    <!-- USAGE -->
-    <section id="tab-usage" class="panel">
-      <div class="row">
-        <button id="usage-sync" class="primary" data-i18n="usage.sync">Sync now</button>
-        <select id="usage-provider" class="lang-select">
-          <option value="" data-i18n="usage.allProviders">All providers</option>
-          <option value="claude">Claude</option>
-          <option value="codex">Codex</option>
-        </select>
-        <select id="usage-project" class="lang-select">
-          <option value="" data-i18n="usage.allProjects">All projects</option>
-        </select>
-        <select id="usage-range" class="lang-select">
-          <option value="7" data-i18n="usage.days7">Last 7 days</option>
-          <option value="30" data-i18n="usage.days30">Last 30 days</option>
-          <option value="" data-i18n="usage.allTime">All time</option>
-        </select>
-        <span id="usage-msg" class="muted"></span>
-      </div>
-      <div id="usage-quota" class="cards"></div>
-      <p class="muted" data-i18n="usage.external">Web, mobile, and other-computer usage is reflected in account quota only and cannot be attributed locally.</p>
-      <h2 data-i18n="usage.projects">Projects</h2>
-      <div id="usage-projects"></div>
-      <h2 data-i18n="usage.sessions">Sessions</h2>
-      <div id="usage-sessions"></div>
-      <div id="usage-detail"></div>
-    </section>
-
-    <!-- ACTIONS -->
-    <section id="tab-actions" class="panel">
-      <p class="muted" data-i18n="actions.intro">Outward actions Guai has drafted. Approving here only records the
-        decision — nothing is sent. Execution stays behind /guai-confirm.</p>
-      <div id="actions"></div>
-    </section>
-
-    <!-- SCHEDULE -->
-    <section id="tab-schedule" class="panel">
-      <p class="muted" data-i18n="schedule.intro">Activate the daily report. While Guai is open (incl. the tray) the
-        in-app scheduler fires it; enable durable to also register a Windows scheduled
-        task so it runs even when the app is closed.</p>
-      <form id="schedule-form" class="form"></form>
-      <div class="row">
-        <button id="schedule-save" class="primary" data-i18n="schedule.save">Save schedule</button>
-        <span id="schedule-msg" class="muted"></span>
-      </div>
-      <div id="schedule-state" class="cards"></div>
-    </section>
   </main>
+
+  <!-- SETTINGS (full-screen; shown when body.settings-open) -->
+  <div id="settings-view">
+    <div class="set-head">
+      <button id="settings-back" class="ghost icon-btn"><svg class="icon"><use href="#ic-back"/></svg><span data-i18n="settings.back">Back</span></button>
+      <span class="set-title" data-i18n="settings.title">Settings</span>
+    </div>
+    <div class="set-body">
+      <nav class="set-nav">
+        <button class="set-nav-item active" data-set="general" data-i18n="settings.general">General</button>
+        <button class="set-nav-item" data-set="accounts" data-i18n="tab.accounts">Accounts</button>
+        <button class="set-nav-item" data-set="usage" data-i18n="tab.usage">Usage</button>
+        <button class="set-nav-item" data-set="schedule" data-i18n="tab.schedule">Schedule</button>
+      </nav>
+      <div class="set-content">
+        <!-- GENERAL (Config) -->
+        <section id="set-general" class="settings-section active">
+          <p class="muted" data-i18n="config.intro">Edits are validated and saved to config/guai.config.json.
+            A running sweep/brief picks them up on its next run (no hot reload).</p>
+          <form id="config-form" class="form"></form>
+          <div class="row">
+            <button id="config-save" class="primary" data-i18n="config.save">Save config</button>
+            <span id="config-msg" class="muted"></span>
+          </div>
+        </section>
+
+        <!-- ACCOUNTS -->
+        <section id="set-accounts" class="settings-section">
+          <p class="muted" data-i18n="accounts.intro">Connect the accounts Guai monitors and acts through. Tokens are
+            stored locally in state/secrets.json (gitignored) and never leave this machine. Environment variables
+            take precedence over saved tokens.</p>
+          <form id="identity-form" class="form">
+            <label for="acct-owner" data-i18n="accounts.ownerLabel">Owner email</label>
+            <input id="acct-owner" type="text" autocomplete="off" />
+          </form>
+          <div class="row">
+            <button id="identity-save" class="primary" data-i18n="accounts.saveIdentity">Save</button>
+            <span id="identity-msg" class="muted"></span>
+          </div>
+          <h2 data-i18n="accounts.connections">Connections</h2>
+          <div id="accounts"></div>
+        </section>
+
+        <!-- USAGE -->
+        <section id="set-usage" class="settings-section">
+          <div class="row">
+            <button id="usage-sync" class="primary" data-i18n="usage.sync">Sync now</button>
+            <select id="usage-provider" class="lang-select">
+              <option value="" data-i18n="usage.allProviders">All providers</option>
+              <option value="claude">Claude</option>
+              <option value="codex">Codex</option>
+            </select>
+            <select id="usage-project" class="lang-select">
+              <option value="" data-i18n="usage.allProjects">All projects</option>
+            </select>
+            <select id="usage-range" class="lang-select">
+              <option value="7" data-i18n="usage.days7">Last 7 days</option>
+              <option value="30" data-i18n="usage.days30">Last 30 days</option>
+              <option value="" data-i18n="usage.allTime">All time</option>
+            </select>
+            <span id="usage-msg" class="muted"></span>
+          </div>
+          <div id="usage-quota" class="cards"></div>
+          <p class="muted" data-i18n="usage.external">Web, mobile, and other-computer usage is reflected in account quota only and cannot be attributed locally.</p>
+          <h2 data-i18n="usage.projects">Projects</h2>
+          <div id="usage-projects"></div>
+          <h2 data-i18n="usage.sessions">Sessions</h2>
+          <div id="usage-sessions"></div>
+          <div id="usage-detail"></div>
+        </section>
+
+        <!-- SCHEDULE -->
+        <section id="set-schedule" class="settings-section">
+          <p class="muted" data-i18n="schedule.intro">Activate the daily report. While Guai is open (incl. the tray) the
+            in-app scheduler fires it; enable durable to also register a Windows scheduled
+            task so it runs even when the app is closed.</p>
+          <form id="schedule-form" class="form"></form>
+          <div class="row">
+            <button id="schedule-save" class="primary" data-i18n="schedule.save">Save schedule</button>
+            <span id="schedule-msg" class="muted"></span>
+          </div>
+          <div id="schedule-state" class="cards"></div>
+        </section>
+      </div>
+    </div>
+  </div>
 
   <script src="app.js"></script>
 </body>

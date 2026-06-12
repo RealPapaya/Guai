@@ -112,3 +112,63 @@ code { background: #0c0e12; padding: 1px 5px; border-radius: 4px; font-size: 12p
 }
 .acct-row input[type="password"]:disabled { opacity: .5; }
 .acct-note { color: #8b95a3; font-size: 12px; margin-top: 8px; }
+
+/* --- icons ------------------------------------------------------------------- */
+.svg-sprite { position: absolute; width: 0; height: 0; }
+.icon { width: 16px; height: 16px; fill: none; stroke: currentColor; flex: none; }
+.tab { display: inline-flex; align-items: center; gap: 7px; }
+.tab.active .icon { color: #d6336c; }              /* active tab: accent-filled (currentColor → stroke) */
+.icon-btn { display: inline-flex; align-items: center; gap: 6px; }
+
+/* --- CHAT (full-height column) ----------------------------------------------- */
+#tab-chat.panel.active { display: flex; flex-direction: column; height: calc(100vh - 140px); }
+.chat-log { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 4px 2px 12px; }
+.bubble { max-width: 82%; padding: 8px 12px; border-radius: 12px; white-space: pre-wrap; word-break: break-word; }
+.bubble.user { align-self: flex-end; background: #d6336c; color: #fff; }
+.bubble.guai { align-self: flex-start; background: #171a21; border: 1px solid #262b33; }
+.bubble pre { margin: 0; font-family: ui-monospace, monospace; font-size: 12px; white-space: pre-wrap; max-height: 320px; overflow: auto; }
+.chat-bar { border-top: 1px solid #262b33; padding-top: 10px; }
+.quick-actions { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+.qa { display: inline-flex; align-items: center; gap: 6px; background: #1a1e25; color: #cfd6df; border: 1px solid #2c333d; border-radius: 8px; padding: 6px 10px; }
+.qa:hover { background: #222732; }
+.composer { display: flex; gap: 8px; }
+.composer input { flex: 1; background: #0c0e12; border: 1px solid #2c333d; color: #e6e8eb; border-radius: 8px; padding: 8px 10px; font: inherit; }
+
+/* --- JOBS (sidebar + editor) -------------------------------------------------- */
+.jobs-layout { display: grid; grid-template-columns: 240px 1fr; gap: 16px; align-items: start; }
+.jobs-side { display: flex; flex-direction: column; gap: 8px; }
+.jobs-side-head { margin-bottom: 4px; }
+.job-list-item { padding: 10px 12px; background: #171a21; border: 1px solid #262b33; border-radius: 10px;
+  cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.job-list-item:hover { border-color: #3a414c; }
+.job-list-item.active { border-color: #d6336c; }
+.job-list-item .name { font-weight: 600; font-size: 13px; }
+.job-editor { background: #171a21; border: 1px solid #262b33; border-radius: 10px; padding: 16px; min-height: 200px; }
+.job-editor .form { max-width: none; }
+.subtask-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.subtask-row input[type="text"] { flex: 1; background: #0c0e12; border: 1px solid #2c333d; color: #e6e8eb;
+  border-radius: 7px; padding: 6px 9px; font: inherit; }
+.subtask-row .remove { background: none; border: 0; color: #8b95a3; padding: 2px 6px; }
+.subtask-row .remove:hover { color: #f87171; }
+
+/* segmented control (execution mode) */
+.segmented { display: inline-flex; border: 1px solid #2c333d; border-radius: 8px; overflow: hidden; }
+.segmented button { border: 0; border-radius: 0; background: #1a1e25; color: #cfd6df; padding: 6px 12px; }
+.segmented button:hover { background: #222732; }
+.segmented button.active { background: #d6336c; color: #fff; }
+
+/* --- SETTINGS (full-screen view) --------------------------------------------- */
+#settings-view { display: none; }
+body.settings-open #settings-view { display: block; }
+body.settings-open nav#tabs, body.settings-open main { display: none; }
+.set-head { display: flex; align-items: center; gap: 12px; padding: 12px 20px; border-bottom: 1px solid #262b33; background: #12151b; }
+.set-title { font-weight: 600; }
+.set-body { display: grid; grid-template-columns: 200px 1fr; max-width: 940px; margin: 0 auto; }
+.set-nav { display: flex; flex-direction: column; gap: 2px; padding: 16px 8px; border-right: 1px solid #262b33; }
+.set-nav-item { text-align: left; background: none; border: 0; color: #8b95a3; padding: 9px 12px; border-radius: 8px;
+  border-left: 2px solid transparent; }
+.set-nav-item:hover { color: #e6e8eb; background: #171a21; }
+.set-nav-item.active { color: #e6e8eb; background: #171a21; border-left-color: #d6336c; }
+.set-content { padding: 18px 20px 40px; }
+.settings-section { display: none; }
+.settings-section.active { display: block; }

@@ -36,6 +36,42 @@ const I18N = {
     'badge.armed': 'armed',
     'badge.idle': 'idle',
 
+    'tab.chat': 'Chat',
+    'tab.jobs': 'Jobs',
+    'settings.title': 'Settings',
+    'settings.back': 'Back',
+    'settings.general': 'General',
+
+    'chat.placeholder': 'Type a command (sweep, brief, status)…',
+    'chat.qa.brief': 'Run brief',
+    'chat.welcome': "Hi — I'm Guai. I can run: {list}. Type one, or use the buttons below.",
+    'chat.running': 'Running {cmd}…',
+    'chat.unknown': 'Unknown command "{cmd}". Try: {list}',
+    'chat.empty': '(no output)',
+
+    'status.pendingApprovals': 'Pending approvals',
+
+    'jobs.add': 'Add job',
+    'jobs.name': 'Name',
+    'jobs.description': 'Description',
+    'jobs.model': 'Model',
+    'jobs.modelAuto': 'Let main agent assign dynamically',
+    'jobs.mode': 'Execution mode',
+    'jobs.mode.active': 'Active',
+    'jobs.mode.passive': 'Passive',
+    'jobs.mode.scheduled': 'Scheduled',
+    'jobs.cron': 'Schedule (HH:MM or cron)',
+    'jobs.subtasks': 'Sub-tasks',
+    'jobs.addSubtask': 'Add sub-task',
+    'jobs.save': 'Save jobs',
+    'jobs.saved': 'Saved.',
+    'jobs.empty': 'Select a job, or add one.',
+    'jobs.newName': 'New job',
+    'jobs.badge.active': 'active',
+    'jobs.badge.passive': 'passive',
+    'jobs.badge.scheduled': 'scheduled',
+    'jobs.failed': 'Failed: {msg}',
+
     'tab.status': 'Status',
     'tab.monitors': 'Monitors',
     'tab.config': 'Config',
@@ -172,6 +208,42 @@ const I18N = {
     'refresh': '重新整理',
     'badge.armed': '已啟用',
     'badge.idle': '待命',
+
+    'tab.chat': '對話',
+    'tab.jobs': '工作',
+    'settings.title': '設定',
+    'settings.back': '返回',
+    'settings.general': '一般',
+
+    'chat.placeholder': '輸入指令（sweep、brief、status）…',
+    'chat.qa.brief': '執行簡報',
+    'chat.welcome': '嗨，我是乖。我可以執行：{list}。輸入其中一項，或使用下方按鈕。',
+    'chat.running': '正在執行 {cmd}…',
+    'chat.unknown': '未知指令「{cmd}」。試試：{list}',
+    'chat.empty': '（沒有輸出）',
+
+    'status.pendingApprovals': '待核准',
+
+    'jobs.add': '新增工作',
+    'jobs.name': '名稱',
+    'jobs.description': '說明',
+    'jobs.model': '模型',
+    'jobs.modelAuto': '由主代理動態指派',
+    'jobs.mode': '執行模式',
+    'jobs.mode.active': '主動',
+    'jobs.mode.passive': '被動',
+    'jobs.mode.scheduled': '排程',
+    'jobs.cron': '排程（HH:MM 或 cron）',
+    'jobs.subtasks': '子任務',
+    'jobs.addSubtask': '新增子任務',
+    'jobs.save': '儲存工作',
+    'jobs.saved': '已儲存。',
+    'jobs.empty': '選擇一個工作，或新增一個。',
+    'jobs.newName': '新工作',
+    'jobs.badge.active': '主動',
+    'jobs.badge.passive': '被動',
+    'jobs.badge.scheduled': '排程',
+    'jobs.failed': '失敗：{msg}',
 
     'tab.status': '狀態',
     'tab.monitors': '監控',
@@ -318,13 +390,13 @@ function applyI18n() {
   document.documentElement.lang = LANG === 'zh-TW' ? 'zh-Hant' : 'en';
   $$('[data-i18n]').forEach((n) => { n.textContent = t(/** @type {string} */(n.dataset.i18n)); });
   $$('[data-i18n-title]').forEach((n) => { n.title = t(/** @type {string} */(n.dataset.i18nTitle)); });
+  $$('[data-i18n-ph]').forEach((n) => { /** @type {HTMLInputElement} */(n).placeholder = t(/** @type {string} */(n.dataset.i18nPh)); });
 }
 async function setLang(lang, persist) {
   LANG = lang === 'zh-TW' ? 'zh-TW' : 'en';
   applyI18n();
-  // Re-render the active tab so JS-built strings (cards, labels, rows) update too.
-  const active = $('.tab.active');
-  if (active) activate(/** @type {string} */ (active.dataset.tab));
+  // Re-render the visible surface so JS-built strings (cards, labels, rows) update too.
+  reloadActive();
   if (persist) {
     try {
       const cfg = await call(api.getConfig());
@@ -337,6 +409,19 @@ async function setLang(lang, persist) {
 const fmtTime = (ts) => (ts ? new Date(ts).toLocaleString() : '—');
 // Color comes from a CSS class (see styles.css) — no inline styles, so CSP stays strict.
 const chip = (txt, cls) => el('span', { class: 'chip ' + cls }, txt);
+
+// SVG <use> of a sprite symbol. HTML createElement can't make SVG-namespaced nodes, so
+// build them explicitly. Used by JS-built buttons; static markup inlines <svg><use> directly.
+const SVGNS = 'http://www.w3.org/2000/svg';
+function icon(name, cls = 'icon') {
+  const svg = document.createElementNS(SVGNS, 'svg');
+  svg.setAttribute('class', cls);
+  svg.setAttribute('aria-hidden', 'true');
+  const use = document.createElementNS(SVGNS, 'use');
+  use.setAttribute('href', '#' + name);
+  svg.appendChild(use);
+  return svg;
+}
 
 /** Unwrap a {ok,data}|{ok:false,error} bridge reply, throwing on error. */
 async function call(promise) {
@@ -358,15 +443,37 @@ function setPath(o, p, v) {
   cur[last] = v;
 }
 
-// --- tabs ---------------------------------------------------------------------
+// --- tabs + settings (two independent routers; they key off #tab-* vs #set-*) ----
 
-const LOADERS = { status: loadStatus, monitors: loadMonitors, config: loadConfigTab, accounts: loadAccounts, usage: loadUsage, actions: loadActions, schedule: loadSchedule };
+let lastTab = 'chat';
+const LOADERS = { chat: loadChat, jobs: loadJobs, status: loadStatus };
 function activate(name) {
   $$('.tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === name));
   $$('.panel').forEach((p) => p.classList.toggle('active', p.id === `tab-${name}`));
+  lastTab = name;
   LOADERS[name]?.();
 }
 $$('.tab').forEach((t) => t.addEventListener('click', () => activate(/** @type {string} */(t.dataset.tab))));
+
+// Settings full-screen view. Reuses the original tab loaders verbatim — only relocated.
+const SETTINGS_LOADERS = { general: loadConfigTab, accounts: loadAccounts, usage: loadUsage, schedule: loadSchedule };
+let lastSettings = 'general';
+function activateSettings(section) {
+  $$('.set-nav-item').forEach((n) => n.classList.toggle('active', n.dataset.set === section));
+  $$('.settings-section').forEach((s) => s.classList.toggle('active', s.id === `set-${section}`));
+  lastSettings = section;
+  SETTINGS_LOADERS[section]?.();
+}
+function openSettings(section = 'general') { document.body.classList.add('settings-open'); activateSettings(section); }
+function closeSettings() { document.body.classList.remove('settings-open'); activate(lastTab); }
+$$('.set-nav-item').forEach((n) => n.addEventListener('click', () => activateSettings(/** @type {string} */(n.dataset.set))));
+$('#open-settings').addEventListener('click', () => openSettings(lastSettings));
+$('#settings-back').addEventListener('click', closeSettings);
+/** Re-render whatever surface is currently visible (settings section, else active tab). */
+function reloadActive() {
+  if (document.body.classList.contains('settings-open')) activateSettings(lastSettings);
+  else { const a = $('.tab.active'); if (a) activate(/** @type {string} */ (a.dataset.tab)); }
+}
 
 function setArmed(on) {
   const b = $('#armed-badge');
@@ -409,6 +516,9 @@ async function loadStatus() {
     cards.replaceChildren(el('div', { class: 'err' }, t('status.failed', { msg: e.message })));
     findings.replaceChildren();
   }
+  // Pending approvals + Monitors share the Status panel now — render them alongside.
+  loadActions();
+  loadMonitors();
 }
 const stat = (big, label) => el('div', { class: 'card' }, el('div', { class: 'big', text: String(big) }), el('div', { class: 'label', text: label }));
 function timeAgo(ts) {
@@ -429,7 +539,7 @@ $('#run-sweep').addEventListener('click', async () => {
   } catch (e) { flash(msg, e.message, true); }
   finally { btn.disabled = false; }
 });
-$('#refresh').addEventListener('click', () => activate(/** @type {string} */($('.tab.active').dataset.tab)));
+$('#refresh').addEventListener('click', () => reloadActive());
 $('#open-dashboard').addEventListener('click', async () => {
   try { await call(api.openDashboard()); } catch (e) { flash($('#status-msg'), e.message, true); }
 });
@@ -745,13 +855,190 @@ $('#schedule-save').addEventListener('click', async () => {
   } catch (e) { flash(msg, e.message, true); }
 });
 
+// --- CHAT ---------------------------------------------------------------------
+// A deterministic command console. sendMessage() is the single seam a real LLM/agent
+// backend replaces later — the bubble UI, composer, and quick actions stay as-is.
+
+// Renderer mirror of main.js CONSOLE_CMDS (main is the real gate). Only the chat-useful ones.
+const CONSOLE_CMDS_UI = ['status', 'sweep', 'brief', 'dashboard', 'actions', 'tasks', 'traces', 'catalog', 'usage-summary'];
+let chatBooted = false;
+
+/** Append a chat bubble and return its node (so a pending bubble can be filled in later). */
+function bubble(role, content) {
+  const b = el('div', { class: 'bubble ' + role });
+  if (content != null) b.append(/** @type {any} */ (content).nodeType ? content : document.createTextNode(String(content)));
+  const log = $('#chat-log');
+  log.append(b);
+  log.scrollTop = log.scrollHeight;
+  return b;
+}
+
+/** Summarize a command's result as a node (rather than dumping raw JSON). */
+function renderResult(cmd, data) {
+  if (data == null) return el('span', { text: t('chat.empty') });
+  if (cmd === 'status') {
+    const ba = data.findings?.byAction || {};
+    const cost = data.cost?.latestUsd != null ? `~$${data.cost.latestUsd}` : '—';
+    return el('span', { text: `${data.findings?.open ?? 0} open · ${(ba.push || 0) + (ba.escalate || 0)} push/escalate · ${data.pending?.length ?? 0} pending · ${cost}` });
+  }
+  if (cmd === 'sweep') {
+    const skipped = data.skipped?.length ? t('status.skipped', { list: data.skipped.join(', ') }) : '';
+    return el('span', { text: t('status.sweepDone', { findings: data.counts?.findings ?? 0, hot: data.hot?.length ?? 0, skipped }) });
+  }
+  if (cmd === 'brief') return el('pre', { text: data.markdown || t('chat.empty') });
+  if (cmd === 'actions') {
+    if (!data.length) return el('span', { text: t('actions.none') });
+    return el('div', {}, ...data.map((a) => el('div', { text: '• ' + (a.kind || '?') + (a.rationale ? ' — ' + a.rationale : '') })));
+  }
+  if (cmd === 'usage-summary') {
+    const tot = (data.totals || []).map((x) => `${x.provider}: ${fmtTokens(x.total_tokens)}`).join(' · ');
+    return el('span', { text: tot || t('chat.empty') });
+  }
+  if (cmd === 'dashboard' && data.path) return el('span', { text: data.path });
+  if (Array.isArray(data)) return el('span', { text: `${data.length}` });
+  return el('pre', { text: JSON.stringify(data, null, 2) });
+}
+
+async function sendMessage(text) {
+  const trimmed = (text || '').trim();
+  if (!trimmed) return;
+  const cmd = trimmed.split(/\s+/)[0].toLowerCase();
+  bubble('user', trimmed);
+  const list = CONSOLE_CMDS_UI.join(', ');
+  if (!CONSOLE_CMDS_UI.includes(cmd)) { bubble('guai', t('chat.unknown', { cmd, list })); return; }
+  const pending = bubble('guai', t('chat.running', { cmd }));
+  try {
+    const data = await call(api.runControl(cmd)); // ← the seam an agent backend replaces later
+    pending.replaceChildren(renderResult(cmd, data));
+  } catch (e) {
+    pending.replaceChildren(el('div', { class: 'err', text: e.message }));
+  }
+  const log = $('#chat-log'); log.scrollTop = log.scrollHeight;
+}
+
+function loadChat() {
+  if (!chatBooted) { bubble('guai', t('chat.welcome', { list: CONSOLE_CMDS_UI.join(', ') })); chatBooted = true; }
+}
+
+$('#chat-send').addEventListener('click', () => { const inp = /** @type {HTMLInputElement} */ ($('#chat-input')); sendMessage(inp.value); inp.value = ''; });
+$('#chat-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { const inp = /** @type {HTMLInputElement} */ (e.target); sendMessage(inp.value); inp.value = ''; }
+});
+$$('.qa').forEach((b) => b.addEventListener('click', () => sendMessage(/** @type {string} */ (b.dataset.cmd))));
+
+// --- JOBS ---------------------------------------------------------------------
+// Edits mutate an in-memory working copy of config.jobs; "Save jobs" persists the array.
+
+const JOB_MODEL_TIERS = ['opus', 'sonnet', 'haiku'];
+const JOB_MODES = ['active', 'passive', 'scheduled'];
+const JOB_MODE_CHIP = { active: 'a-push', passive: 'a-store', scheduled: 'a-digest' };
+/** @type {any[]|null} */ let jobsState = null;
+let selectedJobIdx = -1;
+
+async function loadJobs() {
+  try { jobsState = await call(api.getJobs()); }
+  catch (e) { $('#job-list').replaceChildren(el('div', { class: 'err', text: e.message })); return; }
+  if (selectedJobIdx < 0 && jobsState.length) selectedJobIdx = 0;
+  if (selectedJobIdx >= jobsState.length) selectedJobIdx = jobsState.length - 1;
+  renderJobList(); renderJobEditor();
+}
+
+function renderJobList() {
+  const wrap = $('#job-list');
+  if (!jobsState) return;
+  wrap.replaceChildren(...jobsState.map((j, i) => el('div', {
+    class: 'job-list-item' + (i === selectedJobIdx ? ' active' : ''),
+    onclick: () => { selectedJobIdx = i; renderJobList(); renderJobEditor(); },
+  }, el('div', { class: 'name', text: j.name || t('jobs.newName') }),
+    chip(t('jobs.badge.' + j.mode), JOB_MODE_CHIP[j.mode] || 'a-store'))));
+}
+
+async function persistJobs() {
+  const msg = $('#jobs-msg');
+  try { await call(api.saveJobs(jobsState)); flash(msg, t('jobs.saved'), false); }
+  catch (e) { flash(msg, t('jobs.failed', { msg: e.message }), true); }
+}
+
+function renderJobEditor() {
+  const wrap = $('#job-editor');
+  if (!jobsState || selectedJobIdx < 0 || !jobsState[selectedJobIdx]) {
+    wrap.replaceChildren(el('div', { class: 'empty', text: t('jobs.empty') }));
+    return;
+  }
+  const j = jobsState[selectedJobIdx];
+
+  const nameInput = el('input', { type: 'text' });
+  /** @type {HTMLInputElement} */ (nameInput).value = j.name || '';
+  nameInput.addEventListener('input', () => { j.name = /** @type {HTMLInputElement} */ (nameInput).value; renderJobList(); });
+
+  const descInput = el('textarea', {});
+  /** @type {HTMLTextAreaElement} */ (descInput).value = j.description || '';
+  descInput.addEventListener('input', () => { j.description = /** @type {HTMLTextAreaElement} */ (descInput).value; });
+
+  const modelSelect = el('select', { class: 'lang-select' }, ...JOB_MODEL_TIERS.map((m) => el('option', { value: m, text: m })));
+  /** @type {HTMLSelectElement} */ (modelSelect).value = j.model || 'sonnet';
+  /** @type {HTMLSelectElement} */ (modelSelect).disabled = j.model === null;
+  modelSelect.addEventListener('change', () => { j.model = /** @type {HTMLSelectElement} */ (modelSelect).value; });
+
+  const autoInput = el('input', { type: 'checkbox' });
+  /** @type {HTMLInputElement} */ (autoInput).checked = j.model === null;
+  autoInput.addEventListener('change', () => {
+    const on = /** @type {HTMLInputElement} */ (autoInput).checked;
+    if (on) { j.model = null; /** @type {HTMLSelectElement} */ (modelSelect).disabled = true; }
+    else { j.model = /** @type {HTMLSelectElement} */ (modelSelect).value || 'sonnet'; /** @type {HTMLSelectElement} */ (modelSelect).disabled = false; }
+  });
+  const autoToggle = el('label', { class: 'switch' }, autoInput, el('span', { class: 'slider' }));
+
+  const seg = el('div', { class: 'segmented' }, ...JOB_MODES.map((m) => el('button', {
+    class: j.mode === m ? 'active' : '', text: t('jobs.mode.' + m),
+    onclick: () => { j.mode = m; renderJobEditor(); renderJobList(); },
+  })));
+
+  const cronInput = el('input', { type: 'text' });
+  /** @type {HTMLInputElement} */ (cronInput).value = j.cron || '';
+  cronInput.addEventListener('input', () => { j.cron = /** @type {HTMLInputElement} */ (cronInput).value || null; });
+
+  const subWrap = el('div', {});
+  const renderSubs = () => {
+    subWrap.replaceChildren(...(j.subtasks || []).map((s, k) => {
+      const cb = el('input', { type: 'checkbox' });
+      /** @type {HTMLInputElement} */ (cb).checked = !!s.done;
+      cb.addEventListener('change', () => { s.done = /** @type {HTMLInputElement} */ (cb).checked; });
+      const txt = el('input', { type: 'text' });
+      /** @type {HTMLInputElement} */ (txt).value = s.text || '';
+      txt.addEventListener('input', () => { s.text = /** @type {HTMLInputElement} */ (txt).value; });
+      const rm = el('button', { class: 'remove', onclick: () => { j.subtasks.splice(k, 1); renderSubs(); } }, icon('ic-x'));
+      return el('div', { class: 'subtask-row' }, cb, txt, rm);
+    }));
+  };
+  renderSubs();
+  const addSub = el('button', { class: 'ghost icon-btn', onclick: () => { (j.subtasks ||= []).push({ text: '', done: false }); renderSubs(); } },
+    icon('ic-add'), el('span', { text: t('jobs.addSubtask') }));
+
+  const form = el('div', { class: 'form' },
+    el('label', { text: t('jobs.name') }), nameInput,
+    el('label', { text: t('jobs.description') }), descInput,
+    el('label', { text: t('jobs.model') }), el('div', { class: 'row' }, modelSelect, autoToggle, el('span', { class: 'muted', text: t('jobs.modelAuto') })),
+    el('label', { text: t('jobs.mode') }), seg,
+    ...(j.mode === 'scheduled' ? [el('label', { text: t('jobs.cron') }), cronInput] : []),
+    el('label', { text: t('jobs.subtasks') }), el('div', {}, subWrap, addSub));
+
+  wrap.replaceChildren(form, el('div', { class: 'row' }, el('button', { class: 'primary', onclick: persistJobs }, t('jobs.save'))));
+}
+
+$('#job-add').addEventListener('click', () => {
+  if (!jobsState) jobsState = [];
+  jobsState.push({ id: 'job-' + Date.now(), name: t('jobs.newName'), description: '', model: null, mode: 'active', cron: null, subtasks: [] });
+  selectedJobIdx = jobsState.length - 1;
+  renderJobList(); renderJobEditor();
+});
+
 // --- boot ---------------------------------------------------------------------
 
 $('#lang-select').addEventListener('change', (e) => setLang(/** @type {HTMLSelectElement} */ (e.target).value, true));
 api.onRefreshed(() => {
-  const active = $('.tab.active').dataset.tab;
-  if (active === 'status') loadStatus();
-  if (active === 'usage') loadUsage();
+  if (document.body.classList.contains('settings-open')) { if (lastSettings === 'usage') loadUsage(); return; }
+  if (lastTab === 'status') loadStatus();
 });
 
 (async function boot() {
@@ -761,5 +1048,7 @@ api.onRefreshed(() => {
   } catch { /* default to English if config can't be read */ }
   /** @type {HTMLSelectElement} */ ($('#lang-select')).value = LANG;
   applyI18n();
-  activate('status');
+  activate('chat');
+  // Set the armed badge correctly before Status is opened (Chat is the default view).
+  try { const s = await call(api.status()); setArmed(s.taskScheduler?.installed || s.schedule?.enabled); } catch { /* badge stays idle */ }
 })();

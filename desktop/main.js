@@ -126,6 +126,17 @@ handle('guai:usage:sessions', (filters = {}) => {
 });
 handle('guai:usage:session', ({ provider, id }) => runControl(['usage-session', `--provider=${provider}`, `--id=${id}`]));
 
+// Chat console: only read-only / already-user-triggerable commands, and NO args/stdin are
+// forwarded — so there's no flag/path injection surface. Mutating channels (config-set,
+// secrets-set, monitors-set, schedule-set, decide) are deliberately NOT reachable here.
+const CONSOLE_CMDS = new Set(['status', 'sweep', 'brief', 'dashboard', 'actions', 'tasks', 'traces', 'catalog', 'usage-summary', 'config-get', 'monitors', 'schedule-get']);
+handle('guai:control', ({ cmd }) => {
+  if (!CONSOLE_CMDS.has(cmd)) throw new Error(`Command "${cmd}" is not allowed from chat.`);
+  return runControl([cmd]);
+});
+handle('guai:jobs:get', () => runControl(['jobs-get']));
+handle('guai:jobs:save', (jobs) => runControl(['jobs-set'], JSON.stringify(jobs)));
+
 // --- the in-app scheduler (fires while the app/tray is open) -------------------
 
 /** ms until the next HH:MM, skipping weekends when weekdaysOnly. */
@@ -265,7 +276,8 @@ function createWindow() {
     win.webContents.on('did-finish-load', () => {
       console.log('SMOKE: renderer loaded ok');
       if (process.env.GUAI_SMOKE_USAGE) {
-        setTimeout(() => win.webContents.executeJavaScript(`document.querySelector('[data-tab="usage"]').click()`), 300);
+        // Usage moved under the gear → open Settings, then select the Usage section.
+        setTimeout(() => win.webContents.executeJavaScript(`document.getElementById('open-settings').click(); document.querySelector('[data-set="usage"]').click()`), 300);
       }
       setTimeout(async () => { // let the status IPC round-trip resolve and render first
         try {

@@ -25,6 +25,12 @@ contextBridge.exposeInMainWorld('guai', {
   usageSummary: () => invoke('guai:usage:summary'),
   usageSessions: (filters) => invoke('guai:usage:sessions', filters),
   usageSession: (provider, id) => invoke('guai:usage:session', { provider, id }),
+  // Chat console: run ONE whitelisted, read-only control command (no args/stdin). The
+  // main process is the real gate (see CONSOLE_CMDS) — this is the LLM-ready send seam.
+  runControl: (cmd) => invoke('guai:control', { cmd }),
+  // Jobs: the autonomy units authored on the Jobs tab, persisted into config.jobs.
+  getJobs: () => invoke('guai:jobs:get'),
+  saveJobs: (jobs) => invoke('guai:jobs:save', jobs),
   // Fired by the main process after a scheduled/tray-triggered job completes.
   onRefreshed: (cb) => {
     const handler = () => cb();

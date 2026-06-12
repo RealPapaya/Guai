@@ -40,6 +40,11 @@ export const UI_LANGUAGES = ['en', 'zh-TW'];
  *  handshake, so no token is stored locally. */
 export const SECRET_NAMES = ['GITHUB_TOKEN', 'LINE_TOKEN', 'ANTHROPIC_API_KEY', 'OPENAI_API_KEY', 'GUAI_SIDECAR_TOKEN'];
 
+/** Model tiers a desktop "Job" may pin to (mirrors config/models.json keys); null = dynamic. */
+export const JOB_MODELS = ['opus', 'sonnet', 'haiku'];
+/** How a Job runs: active (on demand), passive (triggered by findings), scheduled (cron). */
+export const JOB_MODES = ['active', 'passive', 'scheduled'];
+
 /** A disabled flag must be EXPLICITLY false — absent/unknown defaults to enabled,
  *  so an older config (no `monitors` block) keeps monitoring everything. */
 export function monitorEnabled(cfg, domain) {
@@ -144,6 +149,26 @@ export function validateConfig(cfg) {
         errors.push('sidecar.baseUrl must be a localhost HTTP URL');
       if (s.timeoutMs !== undefined) numIn('sidecar.timeoutMs', s.timeoutMs, 1000, 3600000);
     }
+  }
+
+  // Jobs: the desktop "Jobs" tab authors autonomy units. model:null means "let the main
+  // agent assign dynamically"; mode picks how it runs (active/passive/scheduled).
+  if (cfg.jobs !== undefined) {
+    if (!Array.isArray(cfg.jobs)) errors.push('jobs must be an array');
+    else cfg.jobs.forEach((j, i) => {
+      if (!isObj(j)) { errors.push(`jobs[${i}] must be an object`); return; }
+      if (typeof j.name !== 'string' || !j.name.trim()) errors.push(`jobs[${i}].name must be a non-empty string`);
+      if (j.model !== undefined && j.model !== null && !JOB_MODELS.includes(j.model)) errors.push(`jobs[${i}].model must be one of ${JOB_MODELS.join('|')}|null`);
+      if (j.mode !== undefined && !JOB_MODES.includes(j.mode)) errors.push(`jobs[${i}].mode must be one of ${JOB_MODES.join('|')}`);
+      if (j.cron !== undefined && j.cron !== null && typeof j.cron !== 'string') errors.push(`jobs[${i}].cron must be a string`);
+      if (j.subtasks !== undefined) {
+        if (!Array.isArray(j.subtasks)) errors.push(`jobs[${i}].subtasks must be an array`);
+        else j.subtasks.forEach((s, k) => {
+          if (!isObj(s) || typeof s.text !== 'string') errors.push(`jobs[${i}].subtasks[${k}].text must be a string`);
+          else if (s.done !== undefined && typeof s.done !== 'boolean') errors.push(`jobs[${i}].subtasks[${k}].done must be a boolean`);
+        });
+      }
+    });
   }
 
   return { ok: errors.length === 0, errors };

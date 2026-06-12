@@ -24,13 +24,15 @@
 //   schedule-set      (stdin=JSON)  persist schedule + install/remove the durable task
 //   secrets-get                     per-token {set,source} status — NEVER the raw values
 //   secrets-set       (stdin=JSON)  {name,value} → write/clear a token in state/secrets.json
-import { readFileSync, writeFileSync } from 'node:fs';
+//   jobs-get                        config.jobs, or jobs seeded from .claude/agents/* if unset
+//   jobs-set          (stdin=JSON)  validate + persist the jobs array (config.jobs)
+import { readFileSync, writeFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { openMemory } from '../core/memory.js';
 import {
   loadConfig, saveConfig, monitorEnabled, MONITOR_DOMAINS, paths, githubToken,
-  SECRET_NAMES, secretStatus, setFileSecret,
+  SECRET_NAMES, secretStatus, setFileSecret, JOB_MODELS,
 } from '../core/config.js';
 import { runSweep } from '../core/sweep.js';
 import { buildBriefModel, renderBrief } from '../core/render/brief.js';
@@ -79,6 +81,49 @@ function secretsStatusAll() {
   const out = {};
   for (const name of SECRET_NAMES) out[name] = secretStatus(name);
   return out;
+}
+
+// ---- jobs (the desktop "Jobs" tab; autonomy units backed by config.jobs) -----
+
+// Sensible default execution mode per seeded agent. Monitors run inside the sweep
+// (passive), the brief composer is scheduled, orchestration/research are on-demand (active).
+const AGENT_DEFAULT_MODE = {
+  'chief-of-staff': 'active', researcher: 'active', 'digest-writer': 'scheduled',
+  'dev-watcher': 'passive', 'cost-monitor': 'passive', 'inbox-triage': 'passive', 'calendar-aide': 'passive',
+};
+
+/** Pull name/description/model from an agent markdown's `---` frontmatter (no YAML dep). */
+function parseAgentFrontmatter(text) {
+  const m = text.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+  if (!m) return {};
+  const out = {};
+  for (const line of m[1].split(/\r?\n/)) {
+    const kv = line.match(/^([A-Za-z_]+):\s*(.*)$/);
+    if (kv) out[kv[1]] = kv[2].trim();
+  }
+  return out;
+}
+
+/** Seed Jobs from .claude/agents/*.md. Returns jobs WITHOUT persisting — first save persists. */
+function seedJobsFromAgents() {
+  const dir = join(paths.root, '.claude', 'agents');
+  let files = [];
+  try { files = readdirSync(dir).filter((f) => f.endsWith('.md')); } catch { return []; }
+  const jobs = [];
+  for (const f of files.sort()) {
+    const fm = parseAgentFrontmatter(readFileSync(join(dir, f), 'utf8'));
+    const name = fm.name || f.replace(/\.md$/, '');
+    jobs.push({
+      id: name,
+      name,
+      description: fm.description || '',
+      model: JOB_MODELS.includes(fm.model) ? fm.model : null,
+      mode: AGENT_DEFAULT_MODE[name] || 'passive',
+      cron: null,
+      subtasks: [],
+    });
+  }
+  return jobs;
 }
 
 // ---- Windows Task Scheduler (durable "even when app closed") ----------------
@@ -202,6 +247,14 @@ async function main() {
     // Merge over the current config so a partial payload can't drop unrelated top-level keys.
     try { saveConfig({ ...cfg, ...incoming }); } catch (e) { return fail(e.message); }
     return ok({ ok: true });
+  }
+  if (cmd === 'jobs-get') return ok(Array.isArray(cfg.jobs) ? cfg.jobs : seedJobsFromAgents());
+  if (cmd === 'jobs-set') {
+    let incoming;
+    try { incoming = JSON.parse(readStdin()); } catch (e) { return fail('stdin is not valid JSON: ' + e.message); }
+    if (!Array.isArray(incoming)) return fail('jobs-set expects a JSON array of jobs');
+    try { saveConfig({ ...cfg, jobs: incoming }); } catch (e) { return fail(e.message); }
+    return ok({ ok: true, jobs: incoming });
   }
   if (cmd === 'secrets-get') return ok(secretsStatusAll());
   if (cmd === 'secrets-set') {
