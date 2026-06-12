@@ -322,6 +322,20 @@ export function openMemory(dbPath) {
                           GROUP BY p.id,p.name ORDER BY total_tokens DESC LIMIT 50`).all();
       return { accounts: api.usageAccounts(), quota: api.latestQuota(), totals, projects };
     },
+    usageProjects({ provider = null, projectId = null, since = null } = {}) {
+      return q(`SELECT p.id,p.name,COUNT(*) sessions,
+                COALESCE(SUM(s.input_tokens),0) input_tokens,
+                COALESCE(SUM(s.cached_tokens),0) cached_tokens,
+                COALESCE(SUM(s.output_tokens),0) output_tokens,
+                COALESCE(SUM(s.reasoning_tokens),0) reasoning_tokens,
+                COALESCE(SUM(s.total_tokens),0) total_tokens,
+                MAX(s.updated_at) latest_at
+                FROM usage_sessions s JOIN projects p ON p.id=s.project_id
+                WHERE (? IS NULL OR s.provider=?) AND (? IS NULL OR s.project_id=?)
+                  AND (? IS NULL OR s.updated_at>=?)
+                GROUP BY p.id,p.name ORDER BY total_tokens DESC LIMIT 50`)
+        .all(provider, provider, projectId, projectId, since, since);
+    },
     // Time-series feed for the desktop Status → Usage charts. `days` bounds both series;
     // null/0 means all history. quotaHistory drives the quota-% trend line, daily the
     // per-provider token line; quota (latest) + accounts drive the bar chart.

@@ -314,6 +314,11 @@ async function main() {
       case 'catalog': return ok(mem.componentCatalog());
       case 'usage-sync': return ok(await syncUsage(mem));
       case 'usage-summary': return ok(mem.usageSummary());
+      case 'usage-projects': return ok(mem.usageProjects({
+        provider: val('--provider'),
+        projectId: val('--project-id') ? Number(val('--project-id')) : null,
+        since: val('--since') ? Number(val('--since')) : null,
+      }));
       case 'usage-charts': return ok(mem.usageCharts({ days: val('--days') ? Number(val('--days')) : 30 }));
       case 'usage-sessions': return ok(mem.usageSessions({
         provider: val('--provider'),

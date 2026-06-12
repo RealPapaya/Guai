@@ -192,6 +192,14 @@ const I18N = {
     'usage.days7': 'Last 7 days',
     'usage.days30': 'Last 30 days',
     'usage.allTime': 'All time',
+    'usage.scope.today': 'Today',
+    'usage.scope.week': 'This week',
+    'usage.scope.month': 'This month',
+    'usage.scope.all': 'All time',
+    'usage.projectUsage': 'Project workload usage',
+    'usage.details': 'Details',
+    'usage.share': 'Share',
+    'usage.noProjectUsage': 'No project usage in this scope.',
     'usage.projects': 'Projects',
     'usage.sessions': 'Sessions',
     'usage.none': 'No local Claude/Codex sessions found.',
@@ -378,6 +386,14 @@ const I18N = {
     'usage.days7': '最近 7 天',
     'usage.days30': '最近 30 天',
     'usage.allTime': '全部時間',
+    'usage.scope.today': '今日',
+    'usage.scope.week': '本週',
+    'usage.scope.month': '本月',
+    'usage.scope.all': '全部',
+    'usage.projectUsage': '專案工作用量',
+    'usage.details': '細節',
+    'usage.share': '比例',
+    'usage.noProjectUsage': '此範圍內尚無專案用量。',
     'usage.projects': '專案',
     'usage.sessions': '工作階段',
     'usage.none': '尚未找到本機 Claude/Codex 工作階段。',
@@ -774,6 +790,40 @@ function usageAccountCard(a) {
     el('div', { class: 'meta', text: a.last_sync_at ? fmtTime(a.last_sync_at) : '' }));
 }
 
+let usageScope = 'today';
+
+function usageScopeSince() {
+  if (usageScope === 'all') return null;
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  if (usageScope === 'week') {
+    const day = d.getDay() || 7;
+    d.setDate(d.getDate() - day + 1);
+  } else if (usageScope === 'month') {
+    d.setDate(1);
+  }
+  return d.getTime();
+}
+
+function renderProjectUsage(rows) {
+  const wrap = $('#usage-project-chart');
+  const total = rows.reduce((sum, row) => sum + Number(row.total_tokens || 0), 0);
+  if (!rows.length || !total) {
+    wrap.replaceChildren(el('div', { class: 'empty', text: t('usage.noProjectUsage') }));
+    return;
+  }
+  wrap.replaceChildren(el('div', { class: 'usage-provider' }, ...rows.map((row) => {
+    const pct = Math.max(0, Math.min(100, Number(row.total_tokens || 0) / total * 100));
+    return el('div', { class: 'project-usage-row' },
+      el('div', { class: 'project-name', text: row.name }),
+      el('div', { class: 'bar-track' },
+        svgEl('svg', { viewBox: '0 0 100 14', preserveAspectRatio: 'none' },
+          svgEl('rect', { x: 0, y: 0, width: pct.toFixed(2), height: 14, fill: '#6b9bd1' }))),
+      el('div', { class: 'project-total', text: fmtTokens(row.total_tokens) }),
+      el('div', { class: 'project-share', text: `${Math.round(pct)}%` }));
+  })));
+}
+
 async function showUsageSession(provider, id) {
   const wrap = $('#usage-detail');
   try {
@@ -800,18 +850,25 @@ async function loadUsage() {
     projectSelect.replaceChildren(el('option', { value: '', text: t('usage.allProjects') }),
       ...summary.projects.map((p) => el('option', { value: p.id, text: p.name })));
     projectSelect.value = selected;
-    const projectRows = summary.projects.map((p) => el('tr', {},
-      el('td', { text: p.name }), el('td', { text: String(p.sessions) }),
-      el('td', { text: fmtTokens(p.total_tokens) }), el('td', { class: 'muted', text: fmtTime(p.latest_at) })));
-    projects.replaceChildren(projectRows.length ? el('table', {},
-      el('thead', {}, el('tr', {}, ...[t('usage.project'), t('usage.sessions'), t('usage.tokens'), t('usage.updated')].map((h) => el('th', { text: h })))),
-      el('tbody', {}, ...projectRows)) : el('div', { class: 'empty', text: t('usage.none') }));
-
     const provider = /** @type {HTMLSelectElement} */ ($('#usage-provider')).value;
     const projectId = /** @type {HTMLSelectElement} */ ($('#usage-project')).value;
-    const days = /** @type {HTMLSelectElement} */ ($('#usage-range')).value;
+    const since = usageScopeSince();
+    const projectUsage = await call(api.usageProjects({
+      provider: provider || null, projectId: projectId ? Number(projectId) : null, since,
+    }));
+    renderProjectUsage(projectUsage);
+    const projectRows = projectUsage.map((p) => el('tr', {},
+      el('td', { text: p.name }), el('td', { text: String(p.sessions) }),
+      el('td', { text: fmtTokens(p.input_tokens) }), el('td', { text: fmtTokens(p.cached_tokens) }),
+      el('td', { text: fmtTokens(p.output_tokens) }), el('td', { text: fmtTokens(p.reasoning_tokens) }),
+      el('td', { text: fmtTokens(p.total_tokens) }), el('td', { class: 'muted', text: fmtTime(p.latest_at) })));
+    projects.replaceChildren(projectRows.length ? el('table', {},
+      el('thead', {}, el('tr', {}, ...[t('usage.project'), t('usage.sessions'), 'Input', 'Cache', 'Output', 'Reasoning',
+        t('usage.tokens'), t('usage.updated')].map((h) => el('th', { text: h })))),
+      el('tbody', {}, ...projectRows)) : el('div', { class: 'empty', text: t('usage.noProjectUsage') }));
+
     const list = await call(api.usageSessions({ provider: provider || null, projectId: projectId ? Number(projectId) : null,
-      since: days ? Date.now() - Number(days) * 864e5 : null }));
+      since }));
     const sessionRows = list.map((s) => el('tr', {},
       el('td', {}, el('button', { class: 'link-button', onclick: () => showUsageSession(s.provider, s.session_id) }, s.title || s.session_id)),
       el('td', {}, chip(s.provider, s.provider === 'claude' ? 'a-digest' : 'a-store')),
@@ -833,7 +890,12 @@ $('#usage-sync').addEventListener('click', async () => {
   catch (e) { flash(msg, e.message, true); }
   finally { btn.disabled = false; }
 });
-for (const id of ['usage-provider', 'usage-project', 'usage-range']) $('#' + id).addEventListener('change', loadUsage);
+for (const id of ['usage-provider', 'usage-project']) $('#' + id).addEventListener('change', loadUsage);
+$$('#usage-scope button').forEach((b) => b.addEventListener('click', () => {
+  usageScope = /** @type {string} */ (b.dataset.scope);
+  $$('#usage-scope button').forEach((x) => x.classList.toggle('active', x === b));
+  loadUsage();
+}));
 
 // --- STATUS → USAGE charts ----------------------------------------------------
 // Graphical view of provider quota (5h / weekly limits) and token consumption.

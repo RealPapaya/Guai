@@ -23,6 +23,7 @@ contextBridge.exposeInMainWorld('guai', {
   openDashboard: () => invoke('guai:dashboard:open'),
   syncUsage: () => invoke('guai:usage:sync'),
   usageSummary: () => invoke('guai:usage:summary'),
+  usageProjects: (filters) => invoke('guai:usage:projects', filters || {}),
   usageCharts: (opts) => invoke('guai:usage:charts', opts || {}),
   showUsageMini: () => invoke('guai:usage:mini:show'),
   hideUsageMini: () => invoke('guai:usage:mini:hide'),

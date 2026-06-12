@@ -60,6 +60,8 @@ test('usage memory stores project-linked sessions, turns, accounts, and quota', 
   m.replaceUsageTurns('codex', 's', [{ turn_id: 't', title: 'Turn', total_tokens: 42 }]);
   m.addQuotaSnapshot({ provider: 'codex', window_name: 'primary', used_percent: 33, captured_at: 10 });
   assert.equal(m.usageSummary().totals[0].total_tokens, 42);
+  assert.equal(m.usageProjects({ since: 10 })[0].total_tokens, 42);
+  assert.equal(m.usageProjects({ since: 11 }).length, 0);
   assert.equal(m.usageSession('codex', 's').turns[0].title, 'Turn');
   assert.equal(m.latestQuota('codex')[0].used_percent, 33);
   m.close();

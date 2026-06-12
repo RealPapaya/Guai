@@ -131,7 +131,7 @@
 
       <!-- USAGE: graphical quota + token charts (Claude / Codex) -->
       <div id="status-usage" class="status-sub">
-        <div class="row">
+        <div class="row usage-controls">
           <div id="usage-charttype" class="segmented">
             <button class="active" data-charttype="bar" data-i18n="usage.chart.bar">Bar</button>
             <button data-charttype="line" data-i18n="usage.chart.line">Line</button>
@@ -210,7 +210,7 @@
 
         <!-- USAGE -->
         <section id="set-usage" class="settings-section">
-          <div class="row">
+          <div class="row usage-controls">
             <button id="usage-sync" class="primary" data-i18n="usage.sync">Sync now</button>
             <select id="usage-provider" class="lang-select">
               <option value="" data-i18n="usage.allProviders">All providers</option>
@@ -220,16 +220,19 @@
             <select id="usage-project" class="lang-select">
               <option value="" data-i18n="usage.allProjects">All projects</option>
             </select>
-            <select id="usage-range" class="lang-select">
-              <option value="7" data-i18n="usage.days7">Last 7 days</option>
-              <option value="30" data-i18n="usage.days30">Last 30 days</option>
-              <option value="" data-i18n="usage.allTime">All time</option>
-            </select>
+            <div id="usage-scope" class="segmented">
+              <button class="active" data-scope="today" data-i18n="usage.scope.today">Today</button>
+              <button data-scope="week" data-i18n="usage.scope.week">This week</button>
+              <button data-scope="month" data-i18n="usage.scope.month">This month</button>
+              <button data-scope="all" data-i18n="usage.scope.all">All time</button>
+            </div>
             <span id="usage-msg" class="muted"></span>
           </div>
           <div id="usage-quota" class="cards"></div>
           <p class="muted" data-i18n="usage.external">Web, mobile, and other-computer usage is reflected in account quota only and cannot be attributed locally.</p>
-          <h2 data-i18n="usage.projects">Projects</h2>
+          <h2 data-i18n="usage.projectUsage">Project workload usage</h2>
+          <div id="usage-project-chart"></div>
+          <h2 data-i18n="usage.details">Details</h2>
           <div id="usage-projects"></div>
           <h2 data-i18n="usage.sessions">Sessions</h2>
           <div id="usage-sessions"></div>

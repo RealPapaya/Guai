@@ -118,6 +118,13 @@ handle('guai:dashboard:open', async () => {
 });
 handle('guai:usage:sync', () => runControl(['usage-sync']));
 handle('guai:usage:summary', () => runControl(['usage-summary']));
+handle('guai:usage:projects', (filters = {}) => {
+  const args = ['usage-projects'];
+  if (filters.provider) args.push(`--provider=${filters.provider}`);
+  if (filters.projectId) args.push(`--project-id=${filters.projectId}`);
+  if (filters.since) args.push(`--since=${filters.since}`);
+  return runControl(args);
+});
 handle('guai:usage:charts', (opts = {}) => runControl(['usage-charts', ...(opts.days ? [`--days=${opts.days}`] : [])]));
 handle('guai:usage:mini:show', () => {
   showUsageMini();
