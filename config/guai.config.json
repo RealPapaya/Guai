@@ -1,6 +1,9 @@
 {
   "owner": "ptr0905@gmail.com",
   "timezone": "local",
+  "ui": {
+    "language": "zh-TW"
+  },
   "quietHours": {
     "start": 21,
     "end": 7
@@ -12,7 +15,7 @@
     "calendar": true
   },
   "schedule": {
-    "enabled": false,
+    "enabled": true,
     "sweepEveryMinutes": 180,
     "dailyBriefHour": 7,
     "dailyBriefMinute": 57,

@@ -32,6 +32,14 @@ export function loadModels() {
  *  email/calendar are the CC-layer monitors (workflows/sweep.workflow.js). */
 export const MONITOR_DOMAINS = ['dev', 'cost', 'email', 'calendar'];
 
+/** UI languages the desktop control panel ships translations for. */
+export const UI_LANGUAGES = ['en', 'zh-TW'];
+
+/** Token-style secrets the Accounts page may manage in state/secrets.json.
+ *  Gmail/Calendar are deliberately absent — they use the Claude Code MCP OAuth
+ *  handshake, so no token is stored locally. */
+export const SECRET_NAMES = ['GITHUB_TOKEN', 'LINE_TOKEN', 'ANTHROPIC_API_KEY', 'OPENAI_API_KEY'];
+
 /** A disabled flag must be EXPLICITLY false — absent/unknown defaults to enabled,
  *  so an older config (no `monitors` block) keeps monitoring everything. */
 export function monitorEnabled(cfg, domain) {
@@ -61,6 +69,12 @@ export function validateConfig(cfg) {
       if (cfg.monitors[d] !== undefined && typeof cfg.monitors[d] !== 'boolean')
         errors.push(`monitors.${d} must be a boolean`);
     }
+  }
+
+  if (cfg.ui !== undefined) {
+    if (!isObj(cfg.ui)) errors.push('ui must be an object');
+    else if (cfg.ui.language !== undefined && !UI_LANGUAGES.includes(cfg.ui.language))
+      errors.push(`ui.language must be one of ${UI_LANGUAGES.join('|')}`);
   }
 
   if (cfg.schedule !== undefined) {
@@ -139,9 +153,10 @@ export function saveConfig(cfg) {
   return { ok: true };
 }
 
+const SECRETS_FILE = join(ROOT, 'state', 'secrets.json');
+
 function fileSecrets() {
-  const p = join(ROOT, 'state', 'secrets.json');
-  return existsSync(p) ? readJson(p) : {};
+  return existsSync(SECRETS_FILE) ? readJson(SECRETS_FILE) : {};
 }
 
 /** Env var wins over the optional secrets file. */
@@ -151,4 +166,40 @@ export function secret(name) {
 
 export function githubToken() {
   return secret('GITHUB_TOKEN');
+}
+
+/**
+ * Whether a secret is configured and where from — WITHOUT exposing its value.
+ * The desktop Accounts page only ever sees {set, source}; the raw token never
+ * crosses the bridge to the (sandboxed) renderer.
+ * @param {string} name
+ * @returns {{set:boolean, source:('env'|'file'|null)}}
+ */
+export function secretStatus(name) {
+  const env = process.env[name];
+  if (env != null && String(env).trim() !== '') return { set: true, source: 'env' };
+  const fromFile = fileSecrets()[name];
+  if (fromFile != null && String(fromFile).trim() !== '') return { set: true, source: 'file' };
+  return { set: false, source: null };
+}
+
+/**
+ * Merge-write a token into state/secrets.json (atomic temp+rename). A blank/empty
+ * value DELETES the key. Only known SECRET_NAMES are accepted. Preserves any other
+ * keys already in the file (e.g. its _comment). Does NOT touch env vars — if the
+ * same name is set in the environment, that still wins at read time.
+ * @param {string} name
+ * @param {string|null|undefined} value
+ * @returns {{ok:true, source:('env'|'file'|null)}}
+ */
+export function setFileSecret(name, value) {
+  if (!SECRET_NAMES.includes(name)) throw new Error(`Unknown secret "${name}". Allowed: ${SECRET_NAMES.join(', ')}`);
+  const current = fileSecrets();
+  const trimmed = value == null ? '' : String(value).trim();
+  if (trimmed === '') delete current[name];
+  else current[name] = trimmed;
+  const tmp = SECRETS_FILE + '.tmp';
+  writeFileSync(tmp, JSON.stringify(current, null, 2) + '\n', { encoding: 'utf8', mode: 0o600 });
+  renameSync(tmp, SECRETS_FILE);
+  return { ok: true, source: secretStatus(name).source };
 }

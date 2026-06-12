@@ -86,3 +86,25 @@ th { color: #8b95a3; font-weight: 500; font-size: 12px; }
 a { color: #6b9bd1; }
 code { background: #0c0e12; padding: 1px 5px; border-radius: 4px; font-size: 12px; }
 .empty { color: #8b95a3; padding: 14px 0; }
+
+/* Language switcher (header) */
+.lang-select {
+  background: #1a1e25; color: #cfd6df; border: 1px solid #2c333d; border-radius: 8px;
+  padding: 4px 8px; font: inherit; font-size: 12px; cursor: pointer;
+}
+.lang-select:hover { background: #222732; }
+
+/* Accounts tab */
+#identity-form { margin-bottom: 12px; }
+.acct-item { background: #171a21; border: 1px solid #262b33; border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; }
+.acct-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.acct-head .name { font-weight: 600; }
+.acct-head .sub { color: #8b95a3; font-size: 12px; }
+.acct-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.acct-row input[type="password"] {
+  flex: 1 1 280px; min-width: 200px;
+  background: #0c0e12; border: 1px solid #2c333d; color: #e6e8eb; border-radius: 7px;
+  padding: 6px 9px; font: inherit; font-family: ui-monospace, monospace;
+}
+.acct-row input[type="password"]:disabled { opacity: .5; }
+.acct-note { color: #8b95a3; font-size: 12px; margin-top: 8px; }

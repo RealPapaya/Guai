@@ -4,7 +4,10 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { openMemory } from '../core/memory.js';
 import { runSweep } from '../core/sweep.js';
-import { loadConfig, validateConfig, monitorEnabled, MONITOR_DOMAINS } from '../core/config.js';
+import {
+  loadConfig, validateConfig, monitorEnabled, MONITOR_DOMAINS,
+  UI_LANGUAGES, SECRET_NAMES, secretStatus, setFileSecret,
+} from '../core/config.js';
 
 const base = loadConfig();
 
@@ -35,6 +38,39 @@ test('validateConfig rejects out-of-range push + gate values', () => {
 test('validateConfig rejects malformed github.repos entries', () => {
   assert.equal(validateConfig({ ...base, github: { ...base.github, repos: ['ok/name', 'bad'] } }).ok, false);
   assert.equal(validateConfig({ ...base, github: { ...base.github, repos: ['owner/name'] } }).ok, true);
+});
+
+test('validateConfig accepts a known ui.language, rejects an unknown one', () => {
+  assert.equal(validateConfig({ ...base, ui: { language: 'zh-TW' } }).ok, true);
+  assert.equal(validateConfig({ ...base, ui: { language: 'en' } }).ok, true);
+  const bad = validateConfig({ ...base, ui: { language: 'fr' } });
+  assert.equal(bad.ok, false);
+  assert.ok(bad.errors.some((e) => e.includes('ui.language')));
+  assert.equal(validateConfig({ ...base, ui: 'zh' }).ok, false);
+  assert.deepEqual(UI_LANGUAGES, ['en', 'zh-TW']);
+});
+
+// ---- secrets status (never exposes a raw value) -----------------------------
+
+test('SECRET_NAMES covers the manageable token accounts', () => {
+  assert.deepEqual(SECRET_NAMES, ['GITHUB_TOKEN', 'LINE_TOKEN', 'ANTHROPIC_API_KEY', 'OPENAI_API_KEY']);
+});
+
+test('secretStatus reports the env source and exposes no value', () => {
+  const NAME = 'LINE_TOKEN';
+  const had = Object.prototype.hasOwnProperty.call(process.env, NAME);
+  const prev = process.env[NAME];
+  try {
+    process.env[NAME] = 'super-secret-token';
+    const st = secretStatus(NAME);
+    assert.deepEqual(st, { set: true, source: 'env' }); // exactly {set,source}, no token field
+  } finally {
+    if (had) process.env[NAME] = prev; else delete process.env[NAME];
+  }
+});
+
+test('setFileSecret rejects unknown names', () => {
+  assert.throws(() => setFileSecret('SOME_OTHER_KEY', 'x'), /Unknown secret/);
 });
 
 // ---- monitorEnabled defaults ------------------------------------------------

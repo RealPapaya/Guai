@@ -10,38 +10,43 @@
 </head>
 <body>
   <header>
-    <div class="brand"><span class="hex">⬢</span> Guai <span class="muted">Chief of Staff</span></div>
+    <div class="brand"><span class="hex">⬢</span> Guai <span class="muted" data-i18n="brand.subtitle">Chief of Staff</span></div>
     <div class="header-right">
+      <select id="lang-select" class="lang-select" title="Language / 語言" aria-label="Language">
+        <option value="en">EN</option>
+        <option value="zh-TW">中文</option>
+      </select>
       <span id="armed-badge" class="badge badge-idle">idle</span>
-      <button id="refresh" class="ghost" title="Refresh">↻</button>
+      <button id="refresh" class="ghost" data-i18n-title="refresh" title="Refresh">↻</button>
     </div>
   </header>
 
   <nav id="tabs">
-    <button class="tab active" data-tab="status">Status</button>
-    <button class="tab" data-tab="monitors">Monitors</button>
-    <button class="tab" data-tab="config">Config</button>
-    <button class="tab" data-tab="actions">Actions</button>
-    <button class="tab" data-tab="schedule">Schedule</button>
+    <button class="tab active" data-tab="status" data-i18n="tab.status">Status</button>
+    <button class="tab" data-tab="monitors" data-i18n="tab.monitors">Monitors</button>
+    <button class="tab" data-tab="config" data-i18n="tab.config">Config</button>
+    <button class="tab" data-tab="accounts" data-i18n="tab.accounts">Accounts</button>
+    <button class="tab" data-tab="actions" data-i18n="tab.actions">Actions</button>
+    <button class="tab" data-tab="schedule" data-i18n="tab.schedule">Schedule</button>
   </nav>
 
   <main>
     <!-- STATUS -->
     <section id="tab-status" class="panel active">
       <div class="row">
-        <button id="run-sweep" class="primary">Run sweep now</button>
-        <button id="open-dashboard" class="ghost">Open full dashboard ↗</button>
+        <button id="run-sweep" class="primary" data-i18n="status.runSweep">Run sweep now</button>
+        <button id="open-dashboard" class="ghost" data-i18n="status.openDashboard">Open full dashboard ↗</button>
         <span id="status-msg" class="muted"></span>
       </div>
       <div id="status-cards" class="cards"></div>
-      <h2>Top open findings</h2>
+      <h2 data-i18n="status.topFindings">Top open findings</h2>
       <div id="findings"></div>
     </section>
 
     <!-- MONITORS -->
     <section id="tab-monitors" class="panel">
-      <p class="muted">Arm or disarm each domain independently. <b>dev</b> and <b>cost</b> run in
-        the deterministic sweep (and the "Run sweep now" button). <b>email</b> and <b>calendar</b>
+      <p class="muted" data-i18n="monitors.intro">Arm or disarm each domain independently. dev and cost run in
+        the deterministic sweep (and the "Run sweep now" button). email and calendar
         need Claude Code's MCP agents, so they only run inside the scheduled Claude Code sweep —
         the toggle here is honored there.</p>
       <div id="monitors"></div>
@@ -49,30 +54,47 @@
 
     <!-- CONFIG -->
     <section id="tab-config" class="panel">
-      <p class="muted">Edits are validated and saved to <code>config/guai.config.json</code>.
+      <p class="muted" data-i18n="config.intro">Edits are validated and saved to config/guai.config.json.
         A running sweep/brief picks them up on its next run (no hot reload).</p>
       <form id="config-form" class="form"></form>
       <div class="row">
-        <button id="config-save" class="primary">Save config</button>
+        <button id="config-save" class="primary" data-i18n="config.save">Save config</button>
         <span id="config-msg" class="muted"></span>
       </div>
     </section>
 
+    <!-- ACCOUNTS -->
+    <section id="tab-accounts" class="panel">
+      <p class="muted" data-i18n="accounts.intro">Connect the accounts Guai monitors and acts through. Tokens are
+        stored locally in state/secrets.json (gitignored) and never leave this machine. Environment variables
+        take precedence over saved tokens.</p>
+      <form id="identity-form" class="form">
+        <label for="acct-owner" data-i18n="accounts.ownerLabel">Owner email</label>
+        <input id="acct-owner" type="text" autocomplete="off" />
+      </form>
+      <div class="row">
+        <button id="identity-save" class="primary" data-i18n="accounts.saveIdentity">Save</button>
+        <span id="identity-msg" class="muted"></span>
+      </div>
+      <h2 data-i18n="accounts.connections">Connections</h2>
+      <div id="accounts"></div>
+    </section>
+
     <!-- ACTIONS -->
     <section id="tab-actions" class="panel">
-      <p class="muted">Outward actions Guai has drafted. Approving here only <b>records</b> the
-        decision — nothing is sent. Execution stays behind <code>/guai-confirm</code>.</p>
+      <p class="muted" data-i18n="actions.intro">Outward actions Guai has drafted. Approving here only records the
+        decision — nothing is sent. Execution stays behind /guai-confirm.</p>
       <div id="actions"></div>
     </section>
 
     <!-- SCHEDULE -->
     <section id="tab-schedule" class="panel">
-      <p class="muted">Activate the daily report. While Guai is open (incl. the tray) the
-        in-app scheduler fires it; enable <b>durable</b> to also register a Windows scheduled
+      <p class="muted" data-i18n="schedule.intro">Activate the daily report. While Guai is open (incl. the tray) the
+        in-app scheduler fires it; enable durable to also register a Windows scheduled
         task so it runs even when the app is closed.</p>
       <form id="schedule-form" class="form"></form>
       <div class="row">
-        <button id="schedule-save" class="primary">Save schedule</button>
+        <button id="schedule-save" class="primary" data-i18n="schedule.save">Save schedule</button>
         <span id="schedule-msg" class="muted"></span>
       </div>
       <div id="schedule-state" class="cards"></div>

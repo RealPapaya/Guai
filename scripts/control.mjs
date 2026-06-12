@@ -22,12 +22,15 @@
 //   decide --id= --status=          record an action decision (records only; never executes)
 //   schedule-get                    config.schedule + real Windows Task Scheduler state
 //   schedule-set      (stdin=JSON)  persist schedule + install/remove the durable task
+//   secrets-get                     per-token {set,source} status — NEVER the raw values
+//   secrets-set       (stdin=JSON)  {name,value} → write/clear a token in state/secrets.json
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { openMemory } from '../core/memory.js';
 import {
   loadConfig, saveConfig, monitorEnabled, MONITOR_DOMAINS, paths, githubToken,
+  SECRET_NAMES, secretStatus, setFileSecret,
 } from '../core/config.js';
 import { runSweep } from '../core/sweep.js';
 import { buildBriefModel, renderBrief } from '../core/render/brief.js';
@@ -64,6 +67,15 @@ const readStdin = () => readFileSync(0, 'utf8');
 function monitorsFlags(cfg) {
   const out = {};
   for (const d of MONITOR_DOMAINS) out[d] = monitorEnabled(cfg, d);
+  return out;
+}
+
+// ---- secrets (token accounts; values stay server-side) ----------------------
+
+/** {NAME: {set, source}} for every manageable token. Never includes raw values. */
+function secretsStatusAll() {
+  const out = {};
+  for (const name of SECRET_NAMES) out[name] = secretStatus(name);
   return out;
 }
 
@@ -176,6 +188,15 @@ async function main() {
     // Merge over the current config so a partial payload can't drop unrelated top-level keys.
     try { saveConfig({ ...cfg, ...incoming }); } catch (e) { return fail(e.message); }
     return ok({ ok: true });
+  }
+  if (cmd === 'secrets-get') return ok(secretsStatusAll());
+  if (cmd === 'secrets-set') {
+    let incoming;
+    try { incoming = JSON.parse(readStdin()); } catch (e) { return fail('stdin is not valid JSON: ' + e.message); }
+    const name = incoming?.name;
+    if (!SECRET_NAMES.includes(name)) return fail(`name must be one of ${SECRET_NAMES.join('|')}`);
+    try { setFileSecret(name, incoming.value); } catch (e) { return fail(e.message); }
+    return ok({ ok: true, secrets: secretsStatusAll() });
   }
   if (cmd === 'schedule-get') {
     return ok({ schedule: cfg.schedule ?? null, taskScheduler: taskQuery() });

@@ -13,6 +13,23 @@ const ROOT = join(__dirname, '..');                 // the Guai repo root
 const CONTROL = join('scripts', 'control.mjs');      // relative to ROOT (cwd of the spawn)
 const ICON = join(__dirname, 'assets', 'icon.png');
 
+// Tray menu language, kept in sync with config.ui.language (the renderer owns the
+// in-window i18n; this is just so the tray/tooltip match when zh-TW is selected).
+let uiLang = 'en';
+const TRAY_I18N = {
+  en: {
+    armed: '● Armed (daily report on)', idle: '○ Idle', open: 'Open Guai', sweep: 'Run sweep now',
+    activate: 'Activate daily report', deactivate: 'Deactivate daily report', quit: 'Quit',
+    tipArmed: 'armed', tipIdle: 'idle',
+  },
+  'zh-TW': {
+    armed: '● 已啟用（每日報告開啟）', idle: '○ 待命', open: '開啟 Guai', sweep: '立即執行掃描',
+    activate: '啟用每日報告', deactivate: '停用每日報告', quit: '結束',
+    tipArmed: '已啟用', tipIdle: '待命',
+  },
+};
+const trayT = (k) => (TRAY_I18N[uiLang] || TRAY_I18N.en)[k] ?? TRAY_I18N.en[k];
+
 /** Absolute path to a system Node ≥22.5 (needs node:sqlite). Electron's bundled Node
  *  isn't guaranteed to ship node:sqlite, so we shell out to the real one. */
 const NODE = (() => {
@@ -74,7 +91,13 @@ function handle(channel, fn) {
 
 handle('guai:status', () => runControl(['status']));
 handle('guai:config:get', () => runControl(['config-get']));
-handle('guai:config:save', (cfg) => runControl(['config-set'], JSON.stringify(cfg)));
+handle('guai:config:save', async (cfg) => {
+  const res = await runControl(['config-set'], JSON.stringify(cfg));
+  await loadUiLang(); refreshTray();   // a language change should retitle the tray immediately
+  return res;
+});
+handle('guai:secrets:get', () => runControl(['secrets-get']));
+handle('guai:secrets:set', ({ name, value }) => runControl(['secrets-set'], JSON.stringify({ name, value })));
 handle('guai:monitors:set', ({ domain, enabled }) => runControl(['monitors-set', `--domain=${domain}`, `--enabled=${enabled}`]));
 handle('guai:sweep', () => runControl(['sweep']));
 handle('guai:brief', () => runControl(['brief', '--save']));
@@ -163,16 +186,24 @@ function trayIcon() {
   return nativeImage.createEmpty();
 }
 
+/** Read config.ui.language so the tray menu matches the in-window language. */
+async function loadUiLang() {
+  try {
+    const cfg = await runControl(['config-get']);
+    uiLang = cfg?.ui?.language === 'zh-TW' ? 'zh-TW' : 'en';
+  } catch { /* keep the current language */ }
+}
+
 function refreshTray() {
   if (!tray) return;
-  tray.setToolTip(`Guai — ${armed ? 'armed' : 'idle'}`);
+  tray.setToolTip(`Guai — ${armed ? trayT('tipArmed') : trayT('tipIdle')}`);
   tray.setContextMenu(Menu.buildFromTemplate([
-    { label: armed ? '● Armed (daily report on)' : '○ Idle', enabled: false },
+    { label: armed ? trayT('armed') : trayT('idle'), enabled: false },
     { type: 'separator' },
-    { label: 'Open Guai', click: showWindow },
-    { label: 'Run sweep now', click: () => runJob('sweep') },
+    { label: trayT('open'), click: showWindow },
+    { label: trayT('sweep'), click: () => runJob('sweep') },
     {
-      label: armed ? 'Deactivate daily report' : 'Activate daily report',
+      label: armed ? trayT('deactivate') : trayT('activate'),
       click: async () => {
         try {
           // Toggle off the FRESH on-disk state, not the possibly-stale `armed` flag.
@@ -184,7 +215,7 @@ function refreshTray() {
       },
     },
     { type: 'separator' },
-    { label: 'Quit', click: () => { quitting = true; app.quit(); } },
+    { label: trayT('quit'), click: () => { quitting = true; app.quit(); } },
   ]));
 }
 
@@ -234,6 +265,7 @@ if (process.env.GUAI_SMOKE) app.disableHardwareAcceleration(); // avoid GPU need
 
 app.whenReady().then(async () => {
   createWindow();
+  await loadUiLang();
   try { tray = new Tray(trayIcon()); refreshTray(); } catch (e) { console.error('tray init failed:', e); }
   await applySchedule();
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });

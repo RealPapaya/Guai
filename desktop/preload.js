@@ -11,6 +11,9 @@ contextBridge.exposeInMainWorld('guai', {
   getConfig: () => invoke('guai:config:get'),
   saveConfig: (cfg) => invoke('guai:config:save', cfg),
   setMonitor: (domain, enabled) => invoke('guai:monitors:set', { domain, enabled }),
+  // Accounts: status is {set,source} only — the raw token never reaches the renderer.
+  getSecrets: () => invoke('guai:secrets:get'),
+  saveSecret: (name, value) => invoke('guai:secrets:set', { name, value }),
   runSweep: () => invoke('guai:sweep'),
   brief: () => invoke('guai:brief'),
   actions: () => invoke('guai:actions'),
