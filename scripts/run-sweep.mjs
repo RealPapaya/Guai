@@ -28,6 +28,7 @@ const res = await runSweep(mem, cfg, { repos, dry, token: githubToken(), trigger
 const c = res.counts;
 console.log(`\nSweep (${dry ? 'dry' : trigger}) — ${c.findings} findings across ${c.repos} repo(s)`);
 console.log('  by action:', JSON.stringify(c.byAction));
+if (c.skipped?.length) console.log('  skipped (disabled in config.monitors):', c.skipped.join(', '));
 if (res.errors.length) console.log('  errors:', res.errors.map((e) => `${e.repo}: ${e.error}`).join(' | '));
 
 const hot = res.decided.filter((d) => d.gate_action === 'push' || d.gate_action === 'escalate');

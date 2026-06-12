@@ -1,0 +1,14 @@
+{
+  "name": "guai-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Guai desktop control panel — Electron shell over the portable core. Isolated from the zero-dependency core: its own package.json, its own (dev) dependency on Electron.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "make-icon": "node make-icon.mjs"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0"
+  }
+}

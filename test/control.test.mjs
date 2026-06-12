@@ -1,0 +1,82 @@
+// Config validation + per-domain sweep gating — the surface the desktop GUI drives.
+// Pure validation is unit-tested directly; gating runs a dry sweep over an in-memory DB.
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { openMemory } from '../core/memory.js';
+import { runSweep } from '../core/sweep.js';
+import { loadConfig, validateConfig, monitorEnabled, MONITOR_DOMAINS } from '../core/config.js';
+
+const base = loadConfig();
+
+// ---- validateConfig ---------------------------------------------------------
+
+test('validateConfig accepts the shipped config', () => {
+  const { ok, errors } = validateConfig(base);
+  assert.equal(ok, true, errors.join('; '));
+});
+
+test('validateConfig rejects a non-object', () => {
+  assert.equal(validateConfig(null).ok, false);
+  assert.equal(validateConfig(42).ok, false);
+});
+
+test('validateConfig rejects a non-boolean monitor flag', () => {
+  const { ok, errors } = validateConfig({ ...base, monitors: { ...base.monitors, dev: 'yes' } });
+  assert.equal(ok, false);
+  assert.ok(errors.some((e) => e.includes('monitors.dev')));
+});
+
+test('validateConfig rejects out-of-range push + gate values', () => {
+  assert.equal(validateConfig({ ...base, push: { ...base.push, maxPerDay: -1 } }).ok, false);
+  assert.equal(validateConfig({ ...base, gate: { ...base.gate, pushThreshold: 999 } }).ok, false);
+  assert.equal(validateConfig({ ...base, schedule: { ...base.schedule, dailyBriefHour: 24 } }).ok, false);
+});
+
+test('validateConfig rejects malformed github.repos entries', () => {
+  assert.equal(validateConfig({ ...base, github: { ...base.github, repos: ['ok/name', 'bad'] } }).ok, false);
+  assert.equal(validateConfig({ ...base, github: { ...base.github, repos: ['owner/name'] } }).ok, true);
+});
+
+// ---- monitorEnabled defaults ------------------------------------------------
+
+test('monitorEnabled: only an explicit false disables; absent ⇒ enabled', () => {
+  assert.equal(monitorEnabled({ monitors: { dev: false } }, 'dev'), false);
+  assert.equal(monitorEnabled({ monitors: { dev: true } }, 'dev'), true);
+  assert.equal(monitorEnabled({ monitors: {} }, 'dev'), true);   // absent ⇒ on
+  assert.equal(monitorEnabled({}, 'dev'), true);                  // no block ⇒ on
+  assert.equal(MONITOR_DOMAINS.length, 4);
+});
+
+// ---- per-domain gating in the sweep -----------------------------------------
+
+const sweepWith = (monitors) => {
+  const mem = openMemory(':memory:');
+  return runSweep(mem, { ...base, monitors }, { repos: [], dry: true, trigger: 'test' })
+    .finally(() => mem.close());
+};
+
+test('all domains on: dry sweep produces dev + cost findings, nothing skipped', async () => {
+  const res = await sweepWith({ dev: true, cost: true, email: true, calendar: true });
+  assert.deepEqual(res.skipped, []);
+  assert.ok(res.decided.some((f) => f.source === 'dev'));
+  assert.ok(res.decided.some((f) => f.source === 'cost'));
+});
+
+test('cost off: cost ingest is skipped and reported', async () => {
+  const res = await sweepWith({ dev: true, cost: false, email: true, calendar: true });
+  assert.deepEqual(res.skipped, ['cost']);
+  assert.equal(res.decided.some((f) => f.source === 'cost'), false);
+  assert.ok(res.decided.some((f) => f.source === 'dev'));
+});
+
+test('dev off: dev ingest is skipped and reported', async () => {
+  const res = await sweepWith({ dev: false, cost: true, email: true, calendar: true });
+  assert.deepEqual(res.skipped, ['dev']);
+  assert.equal(res.decided.some((f) => f.source === 'dev'), false);
+});
+
+test('both deterministic domains off: nothing ingested', async () => {
+  const res = await sweepWith({ dev: false, cost: false, email: true, calendar: true });
+  assert.deepEqual(res.skipped.sort(), ['cost', 'dev']);
+  assert.equal(res.decided.length, 0);
+});

@@ -9,7 +9,7 @@ import { decide } from './gate.js';
 import { normalizeRepo, fetchRepoFindings } from './ingest/github.js';
 import { runCostMonitor } from './cost.js';
 import { maybeCondense } from './condenser.js';
-import { paths } from './config.js';
+import { paths, monitorEnabled } from './config.js';
 
 function fixtureRepo(cfg, clock) {
   const fx = (n) => JSON.parse(readFileSync(join(paths.fixtures, n), 'utf8'));
@@ -62,10 +62,19 @@ export async function runSweep(mem, cfg, { repos = [], dry = false, token = null
   const errors = [];
   const stats = [];
   const raw = [];
+  const skipped = [];
+
+  // Per-domain arming. dev/cost are the deterministic monitors gated here; the
+  // email/calendar toggles live in the same config block but are honored by the
+  // CC-layer workflow (workflows/sweep.workflow.js), not this pure-Node sweep.
+  const doDev = monitorEnabled(cfg, 'dev');
+  const doCost = withCost && monitorEnabled(cfg, 'cost');
 
   try {
     // --- dev monitor (GitHub) ---
-    if (dry) {
+    if (!doDev) {
+      skipped.push('dev');
+    } else if (dry) {
       const r = fixtureRepo(cfg, clock);
       raw.push(...r.findings); stats.push(r.stats);
     } else {
@@ -80,7 +89,9 @@ export async function runSweep(mem, cfg, { repos = [], dry = false, token = null
     }
 
     // --- cost monitor (deterministic, no LLM) ---
-    if (withCost) {
+    if (!doCost) {
+      if (withCost) skipped.push('cost'); // disabled by config, not by the caller
+    } else {
       try {
         const c = runCostMonitor(mem, cfg, { clock, dry });
         raw.push(...c.findings);
@@ -92,10 +103,10 @@ export async function runSweep(mem, cfg, { repos = [], dry = false, token = null
 
     const { decided, persisted, byAction } = gateAndPersist(mem, cfg, raw, ctx, clock);
     const condensed = maybeCondense(mem, cfg, clock); // keep the working set small
-    const counts = { repos: stats.length, findings: decided.length, persisted: persisted.length, byAction, errors: errors.length, condensed };
+    const counts = { repos: stats.length, findings: decided.length, persisted: persisted.length, byAction, errors: errors.length, condensed, skipped };
 
     mem.endRun(runId, { counts, ok: errors.length === 0, error: errors.length ? JSON.stringify(errors) : null });
-    return { decided, persisted, stats, errors, counts, ctx };
+    return { decided, persisted, stats, errors, counts, skipped, ctx };
   } catch (fatal) {
     mem.endRun(runId, { ok: false, error: fatal.message });
     throw fatal;

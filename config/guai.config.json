@@ -1,15 +1,30 @@
 {
   "owner": "ptr0905@gmail.com",
   "timezone": "local",
-  "quietHours": { "start": 21, "end": 7 },
-
+  "quietHours": {
+    "start": 21,
+    "end": 7
+  },
+  "monitors": {
+    "dev": true,
+    "cost": true,
+    "email": true,
+    "calendar": true
+  },
+  "schedule": {
+    "enabled": false,
+    "sweepEveryMinutes": 180,
+    "dailyBriefHour": 7,
+    "dailyBriefMinute": 57,
+    "weekdaysOnly": true,
+    "durable": false
+  },
   "push": {
     "maxPerHour": 3,
     "maxPerDay": 12,
     "cooldownMinutesPerFingerprint": 180,
     "maxChars": 200
   },
-
   "gate": {
     "pushThreshold": 5,
     "evFloor": 0,
@@ -23,7 +38,6 @@
       "seenDecay": 1
     }
   },
-
   "impactWeights": {
     "blocking_release": 5,
     "money_at_risk": 4,
@@ -36,7 +50,6 @@
     "stale_pr": 1,
     "fyi": 0
   },
-
   "github": {
     "apiBase": "https://api.github.com",
     "repos": [],
@@ -44,7 +57,6 @@
     "staleBranchDays": 30,
     "perPage": 50
   },
-
   "cost": {
     "source": "cc-stats",
     "monthlyBudgetUsd": 900,
@@ -61,14 +73,12 @@
       "default": 10
     }
   },
-
   "brief": {
     "hour": 7,
     "minute": 57,
     "freshnessMinutes": 90,
     "weekdaysOnly": true
   },
-
   "condenser": {
     "resolvedFindingAgeDays": 14,
     "runLogAgeDays": 30,

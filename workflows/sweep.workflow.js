@@ -29,29 +29,45 @@ const FINDINGS = {
 };
 
 phase('Monitor');
-// dev+cost are deterministic and self-persisting (run-sweep gates + writes them).
+// Read which domains are armed (config.monitors) before fanning out. The sandbox has
+// no fs access, so an agent shells the bridge. A disabled domain is skipped entirely.
+const flags = (await agent(
+  'Run `node scripts/control.mjs monitors` from the repo root (D:/Google AI/guai) and return '
+  + 'its JSON output verbatim — an object {dev,cost,email,calendar} of booleans.',
+  { label: 'armed-domains', phase: 'Monitor', schema: {
+    type: 'object', additionalProperties: true,
+    properties: { dev: { type: 'boolean' }, cost: { type: 'boolean' }, email: { type: 'boolean' }, calendar: { type: 'boolean' } },
+  } }
+)) ?? {};
+const armed = (d) => flags[d] !== false; // absent/unknown ⇒ on (matches monitorEnabled)
+
+// dev+cost are deterministic and self-persisting (run-sweep also self-gates by config).
 // inbox+calendar require MCP + judgment, so they EMIT findings to be persisted in Decide.
-const [sweep, inbox, cal] = await parallel([
+const monitorTasks = [
   () => agent(
     'Run Guai\'s deterministic monitors: execute `node scripts/run-sweep.mjs --trigger=cron` '
     + 'from the repo root (D:/Google AI/guai). It ingests GitHub + cost, gates, and persists. '
     + 'Return its stdout summary verbatim.',
     { label: 'dev+cost', phase: 'Monitor' }
   ),
-  () => agent(
-    'You are inbox-triage. Triage recent Gmail via the Gmail MCP tools and return findings '
-    + '(needs_reply/important) with drafted replies as detail.proposedAction. If Gmail is not '
-    + 'authenticated, return {"findings":[]}. Do NOT send anything.',
-    { label: 'inbox-triage', agentType: 'inbox-triage', phase: 'Monitor', schema: FINDINGS }
-  ),
-  () => agent(
-    'You are calendar-aide. Scan the next 2 days via the Calendar MCP tools and return findings '
-    + '(calendar_conflict/meeting_prep). If Calendar is not authenticated, return {"findings":[]}.',
-    { label: 'calendar-aide', agentType: 'calendar-aide', phase: 'Monitor', schema: FINDINGS }
-  ),
-]);
+];
+if (armed('email')) monitorTasks.push(() => agent(
+  'You are inbox-triage. Triage recent Gmail via the Gmail MCP tools and return findings '
+  + '(needs_reply/important) with drafted replies as detail.proposedAction. If Gmail is not '
+  + 'authenticated, return {"findings":[]}. Do NOT send anything.',
+  { label: 'inbox-triage', agentType: 'inbox-triage', phase: 'Monitor', schema: FINDINGS }
+));
+else log('email monitor disabled (config.monitors.email=false) — skipping inbox-triage');
+if (armed('calendar')) monitorTasks.push(() => agent(
+  'You are calendar-aide. Scan the next 2 days via the Calendar MCP tools and return findings '
+  + '(calendar_conflict/meeting_prep). If Calendar is not authenticated, return {"findings":[]}.',
+  { label: 'calendar-aide', agentType: 'calendar-aide', phase: 'Monitor', schema: FINDINGS }
+));
+else log('calendar monitor disabled (config.monitors.calendar=false) — skipping calendar-aide');
 
-const workerFindings = [inbox, cal].filter(Boolean).flatMap((r) => r?.findings ?? []);
+const [sweep, ...workers] = await parallel(monitorTasks);
+
+const workerFindings = workers.filter(Boolean).flatMap((r) => r?.findings ?? []);
 log(`deterministic sweep done; ${workerFindings.length} MCP-worker findings to persist`);
 
 phase('Decide');
